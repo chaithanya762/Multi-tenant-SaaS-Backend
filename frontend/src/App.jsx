@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { 
   Layers, Users, Package, ShoppingCart, ShieldCheck, Activity, 
   Plus, RefreshCw, Moon, Sun, ExternalLink, X, CheckCircle2, 
-  AlertCircle, Search, Lock, Database, WifiOff, Server
+  AlertCircle, Search, Lock, Database, WifiOff, Key, Download, Zap
 } from 'lucide-react';
 
-// Sample Fallback Data for Offline Demo Mode
 const INITIAL_DEMO_TENANTS = [
   { id: 'tenant-alpha', name: 'Alpha Corporation', status: 'ACTIVE' },
   { id: 'tenant-beta', name: 'Beta Solutions LLC', status: 'ACTIVE' }
@@ -33,12 +32,16 @@ const INITIAL_DEMO_ORDERS = {
 };
 
 export default function App() {
-  // Application State
   const [theme, setTheme] = useState('light');
   const [activeTab, setActiveTab] = useState('tenants');
   const [activeTenant, setActiveTenant] = useState('tenant-alpha');
   const [customTenant, setCustomTenant] = useState('');
   const [isCustomTenantMode, setIsCustomTenantMode] = useState(false);
+
+  // JWT & Rate Limit States
+  const [jwtToken, setJwtToken] = useState('');
+  const [useJwtAuth, setUseJwtAuth] = useState(false);
+  const [rateLimitRemaining, setRateLimitRemaining] = useState(60);
 
   // Data States
   const [tenants, setTenants] = useState(INITIAL_DEMO_TENANTS);
@@ -69,7 +72,6 @@ export default function App() {
     }, 4000);
   };
 
-  // Toggle Theme
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
@@ -78,19 +80,32 @@ export default function App() {
 
   const currentTenantId = isCustomTenantMode ? customTenant : activeTenant;
 
-  // API Fetch Helper with Auto Demo Fallback
   const apiFetch = async (url, options = {}) => {
     const headers = {
       'Content-Type': 'application/json',
       ...(options.headers || {})
     };
 
-    if (currentTenantId && !options.skipTenantHeader) {
+    if (useJwtAuth && jwtToken) {
+      headers['Authorization'] = `Bearer ${jwtToken}`;
+    } else if (currentTenantId && !options.skipTenantHeader) {
       headers['X-Tenant-ID'] = currentTenantId;
     }
 
     try {
       const res = await fetch(url, { ...options, headers });
+      
+      // Update Rate Limit Gauge
+      const remainingHeader = res.headers.get('X-RateLimit-Remaining');
+      if (remainingHeader !== null) {
+        setRateLimitRemaining(parseInt(remainingHeader, 10));
+      }
+
+      if (res.status === 429) {
+        addToast('429 Too Many Requests: Tenant quota exceeded!', 'error');
+        throw new Error('Tenant quota exceeded (60 req/min).');
+      }
+
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
         throw new Error(errorData.message || `HTTP ${res.status}: ${res.statusText}`);
@@ -100,12 +115,12 @@ export default function App() {
       return data;
     } catch (err) {
       console.warn(`Backend connection notice for ${url}:`, err.message);
+      if (err.message.includes('429')) throw err;
       setIsDemoMode(true);
       throw err;
     }
   };
 
-  // Initial Health & Load
   useEffect(() => {
     checkHealthAndLoad();
   }, []);
@@ -115,16 +130,15 @@ export default function App() {
       const data = await apiFetch('/actuator/health', { skipTenantHeader: true });
       setHealth(data);
       loadTenants();
-      addToast('Connected to Spring Boot backend!', 'success');
+      addToast('Connected to Spring Boot enterprise backend!', 'success');
     } catch (err) {
       setHealth({ status: 'OFFLINE', error: err.message });
       setIsDemoMode(true);
       loadDemoData();
-      addToast('Backend offline. Loaded Claymorphic Interactive Demo Mode.', 'info');
+      addToast('Backend offline. Running in Claymorphic Interactive Demo Mode.', 'info');
     }
   };
 
-  // Demo Fallback Data Loader
   const loadDemoData = () => {
     const tid = currentTenantId || 'tenant-alpha';
     const pList = INITIAL_DEMO_PRODUCTS[tid] || [];
@@ -141,7 +155,7 @@ export default function App() {
       if (activeTab === 'products') loadProducts();
       if (activeTab === 'orders') loadOrders();
     }
-  }, [activeTenant, customTenant, isCustomTenantMode, activeTab, isDemoMode]);
+  }, [activeTenant, customTenant, isCustomTenantMode, activeTab, isDemoMode, useJwtAuth, jwtToken]);
 
   const loadTenants = async () => {
     try {
@@ -178,7 +192,48 @@ export default function App() {
     }
   };
 
-  // Live Isolation Verification
+  // Issue JWT Token
+  const issueJwtToken = async () => {
+    try {
+      const data = await apiFetch('/api/v1/auth/token', {
+        method: 'POST',
+        body: JSON.stringify({
+          tenantId: currentTenantId,
+          username: 'admin@saas.com',
+          role: 'ROLE_TENANT_ADMIN'
+        }),
+        skipTenantHeader: true
+      });
+      setJwtToken(data.token);
+      setUseJwtAuth(true);
+      addToast(`Generated JWT Token for tenant '${currentTenantId}'!`, 'success');
+    } catch (err) {
+      const dummyToken = `eyJhbGciOiJIUzI1NiJ9.tenant_${currentTenantId}.demo_signature`;
+      setJwtToken(dummyToken);
+      setUseJwtAuth(true);
+      addToast(`Generated Demo JWT Token for '${currentTenantId}'`, 'info');
+    }
+  };
+
+  // Export CSV Helper
+  const exportToCSV = (data, filename) => {
+    if (!data || data.length === 0) {
+      addToast('No data available to export', 'error');
+      return;
+    }
+    const headers = Object.keys(data[0]).join(',');
+    const rows = data.map(obj => Object.values(obj).map(v => `"${v}"`).join(','));
+    const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `${filename}_${currentTenantId}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    addToast(`Exported ${data.length} records to CSV!`, 'success');
+  };
+
   const runIsolationTest = async () => {
     setIsTestingIsolation(true);
     if (!isDemoMode) {
@@ -201,13 +256,12 @@ export default function App() {
       setTimeout(() => {
         setAlphaProducts(INITIAL_DEMO_PRODUCTS['tenant-alpha']);
         setBetaProducts(INITIAL_DEMO_PRODUCTS['tenant-beta']);
-        addToast('Demo RLS isolation verified! Switch tenant context above to test.', 'success');
+        addToast('Demo RLS isolation verified!', 'success');
       }, 500);
     }
     setIsTestingIsolation(false);
   };
 
-  // Form Submissions
   const handleCreateTenant = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
@@ -224,7 +278,7 @@ export default function App() {
           body: JSON.stringify({ id: newT.id, name: newT.name }),
           skipTenantHeader: true
         });
-        addToast(`Tenant '${newT.name}' created on backend!`, 'success');
+        addToast(`Tenant '${newT.name}' onboarded! Default catalog provisioned via Async Event listener.`, 'success');
         loadTenants();
       } catch (err) {
         addToast(err.message, 'error');
@@ -232,7 +286,7 @@ export default function App() {
       }
     } else {
       setTenants(prev => [...prev, newT]);
-      addToast(`Tenant '${newT.name}' added to local session!`, 'success');
+      addToast(`Tenant '${newT.name}' added to session!`, 'success');
     }
     setModalType(null);
   };
@@ -254,7 +308,7 @@ export default function App() {
           method: 'POST',
           body: JSON.stringify(newP)
         });
-        addToast(`Product '${newP.name}' created!`, 'success');
+        addToast(`Product '${newP.name}' created & cache updated!`, 'success');
         loadProducts();
       } catch (err) {
         addToast(err.message, 'error');
@@ -287,7 +341,7 @@ export default function App() {
           method: 'POST',
           body: JSON.stringify(newO)
         });
-        addToast(`Order for ${newO.customerEmail} created!`, 'success');
+        addToast(`Order created for ${newO.customerEmail}!`, 'success');
         loadOrders();
       } catch (err) {
         addToast(err.message, 'error');
@@ -299,40 +353,33 @@ export default function App() {
         content: [newO, ...prev.content],
         totalElements: prev.totalElements + 1
       }));
-      addToast(`Order for ${newO.customerEmail} created in Demo Mode!`, 'success');
+      addToast(`Order created in Demo Mode!`, 'success');
     }
     setModalType(null);
   };
 
   return (
     <div className="app-shell">
-      {/* Backend Status Banner if Offline */}
-      {isDemoMode && (
-        <div style={{
-          background: 'linear-gradient(135deg, #fef3c7, #fde68a)',
-          color: '#92400e',
-          padding: '10px 20px',
-          borderRadius: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          fontSize: '0.88rem',
-          fontWeight: '600',
-          boxShadow: '0 4px 12px rgba(245, 158, 11, 0.2)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <WifiOff size={18} />
-            <span>Spring Boot backend server is starting up or offline. Running in <strong>Claymorphic Interactive Demo Mode</strong>.</span>
+      {/* Toast Notifications */}
+      <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {toasts.map(t => (
+          <div key={t.id} style={{
+            padding: '12px 18px',
+            borderRadius: '16px',
+            background: t.type === 'success' ? '#10b981' : t.type === 'error' ? '#ef4444' : '#3b82f6',
+            color: '#fff',
+            fontSize: '0.88rem',
+            fontWeight: '600',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <CheckCircle2 size={16} />
+            <span>{t.message}</span>
           </div>
-          <button 
-            className="clay-btn-secondary" 
-            style={{ padding: '4px 12px', fontSize: '0.78rem', background: '#fff' }}
-            onClick={checkHealthAndLoad}
-          >
-            Retry Connection
-          </button>
-        </div>
-      )}
+        ))}
+      </div>
 
       {/* Header Navbar */}
       <header className="clay-navbar">
@@ -341,12 +388,28 @@ export default function App() {
             <Layers size={26} />
           </div>
           <div>
-            <div className="brand-title">SaaS<span style={{ color: 'var(--accent-primary)' }}>Core</span></div>
-            <div className="brand-subtitle">Multi-Tenant PostgreSQL RLS Console</div>
+            <div className="brand-title">SaaS<span style={{ color: 'var(--accent-primary)' }}>Core</span> <span style={{ fontSize: '0.75rem', background: '#3b82f6', color: '#fff', padding: '2px 8px', borderRadius: '10px' }}>ENTERPRISE</span></div>
+            <div className="brand-subtitle">PostgreSQL RLS • JWT Auth • Rate Limiter • Cache</div>
           </div>
         </div>
 
         <div className="header-actions">
+          {/* Rate Limit Gauge */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'var(--bg-card)', borderRadius: '16px', fontSize: '0.8rem', fontWeight: '600' }}>
+            <Zap size={14} color="#f59e0b" />
+            <span>Quota: {rateLimitRemaining}/60 req/min</span>
+          </div>
+
+          {/* JWT Auth Button */}
+          <button 
+            className={`clay-btn-${useJwtAuth ? 'primary' : 'secondary'}`} 
+            style={{ padding: '6px 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+            onClick={issueJwtToken}
+          >
+            <Key size={14} />
+            <span>{useJwtAuth ? 'JWT Active' : 'Issue JWT Token'}</span>
+          </button>
+
           {/* Tenant Switcher */}
           <div className="clay-tenant-switcher">
             <div className="tenant-label-tag">
@@ -383,94 +446,45 @@ export default function App() {
               className="clay-btn-secondary" 
               style={{ padding: '6px 10px', borderRadius: '12px', fontSize: '0.8rem' }}
               onClick={() => setIsCustomTenantMode(!isCustomTenantMode)}
-              title="Toggle Custom Tenant Input"
             >
               {isCustomTenantMode ? 'Preset' : 'Custom'}
             </button>
           </div>
 
-          {/* Theme Toggle */}
-          <button className="clay-theme-toggle" onClick={toggleTheme} title="Toggle Dark/Light Clay Theme">
+          <button className="clay-theme-toggle" onClick={toggleTheme} title="Toggle Theme">
             {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
           </button>
         </div>
       </header>
 
-      {/* Main Grid Layout */}
+      {/* Main Grid */}
       <div className="main-grid">
-        {/* Sidebar */}
         <aside className="clay-sidebar">
           <div className="sidebar-title">Navigation</div>
           
-          <button 
-            className={`clay-nav-btn ${activeTab === 'tenants' ? 'active' : ''}`}
-            onClick={() => setActiveTab('tenants')}
-          >
-            <div className="btn-content-left">
-              <Users size={18} />
-              <span>Tenants</span>
-            </div>
+          <button className={`clay-nav-btn ${activeTab === 'tenants' ? 'active' : ''}`} onClick={() => setActiveTab('tenants')}>
+            <div className="btn-content-left"><Users size={18} /><span>Tenants</span></div>
             <span className="clay-pill-count">{tenants.length}</span>
           </button>
 
-          <button 
-            className={`clay-nav-btn ${activeTab === 'products' ? 'active' : ''}`}
-            onClick={() => setActiveTab('products')}
-          >
-            <div className="btn-content-left">
-              <Package size={18} />
-              <span>Products</span>
-            </div>
+          <button className={`clay-nav-btn ${activeTab === 'products' ? 'active' : ''}`} onClick={() => setActiveTab('products')}>
+            <div className="btn-content-left"><Package size={18} /><span>Products</span></div>
             <span className="clay-pill-count">{products.totalElements || 0}</span>
           </button>
 
-          <button 
-            className={`clay-nav-btn ${activeTab === 'orders' ? 'active' : ''}`}
-            onClick={() => setActiveTab('orders')}
-          >
-            <div className="btn-content-left">
-              <ShoppingCart size={18} />
-              <span>Orders</span>
-            </div>
+          <button className={`clay-nav-btn ${activeTab === 'orders' ? 'active' : ''}`} onClick={() => setActiveTab('orders')}>
+            <div className="btn-content-left"><ShoppingCart size={18} /><span>Orders</span></div>
             <span className="clay-pill-count">{orders.totalElements || 0}</span>
           </button>
 
-          <button 
-            className={`clay-nav-btn ${activeTab === 'isolation-test' ? 'active' : ''}`}
-            onClick={() => setActiveTab('isolation-test')}
-          >
-            <div className="btn-content-left">
-              <ShieldCheck size={18} />
-              <span>RLS Tester</span>
-            </div>
+          <button className={`clay-nav-btn ${activeTab === 'isolation-test' ? 'active' : ''}`} onClick={() => setActiveTab('isolation-test')}>
+            <div className="btn-content-left"><ShieldCheck size={18} /><span>RLS Tester</span></div>
             <span className="clay-badge clay-badge-active" style={{ fontSize: '0.65rem' }}>VERIFY</span>
           </button>
 
-          <button 
-            className={`clay-nav-btn ${activeTab === 'observability' ? 'active' : ''}`}
-            onClick={() => setActiveTab('observability')}
-          >
-            <div className="btn-content-left">
-              <Activity size={18} />
-              <span>Dev & Health</span>
-            </div>
+          <button className={`clay-nav-btn ${activeTab === 'observability' ? 'active' : ''}`} onClick={() => setActiveTab('observability')}>
+            <div className="btn-content-left"><Activity size={18} /><span>Dev & Health</span></div>
           </button>
-
-          {/* Dev Tools Box */}
-          <div className="clay-dev-box">
-            <div className="dev-box-header">
-              <Database size={14} />
-              <span>Quick Links</span>
-            </div>
-            <a href="/swagger-ui.html" target="_blank" rel="noreferrer" className="dev-link-pill">
-              <ExternalLink size={14} />
-              <span>Swagger API Docs</span>
-            </a>
-            <a href="/actuator/prometheus" target="_blank" rel="noreferrer" className="dev-link-pill">
-              <Activity size={14} />
-              <span>Metrics Stream</span>
-            </a>
-          </div>
         </aside>
 
         {/* Content Panel */}
@@ -484,8 +498,7 @@ export default function App() {
                   <p>Global tenant accounts operating outside RLS session scope</p>
                 </div>
                 <button className="clay-btn-primary" onClick={() => setModalType('tenant')}>
-                  <Plus size={16} />
-                  <span>Register Tenant</span>
+                  <Plus size={16} /><span>Register Tenant</span>
                 </button>
               </div>
 
@@ -496,9 +509,7 @@ export default function App() {
                       <div className="card-item-title">{t.name}</div>
                       <span className="clay-badge clay-badge-active">{t.status || 'ACTIVE'}</span>
                     </div>
-                    <div className="card-item-subtitle">
-                      <strong>Tenant ID:</strong> {t.id}
-                    </div>
+                    <div className="card-item-subtitle"><strong>Tenant ID:</strong> {t.id}</div>
                     <button 
                       className="clay-btn-secondary" 
                       style={{ marginTop: '10px', fontSize: '0.8rem', padding: '8px 12px' }}
@@ -526,13 +537,11 @@ export default function App() {
                   <p>Filtered by <strong>X-Tenant-ID: {currentTenantId}</strong></p>
                 </div>
                 <div style={{ display: 'flex', gap: '12px' }}>
-                  <button className="clay-btn-secondary" onClick={loadProducts}>
-                    <RefreshCw size={16} />
-                    <span>Refresh</span>
+                  <button className="clay-btn-secondary" onClick={() => exportToCSV(products.content, 'products')}>
+                    <Download size={16} /><span>Export CSV</span>
                   </button>
                   <button className="clay-btn-primary" onClick={() => setModalType('product')}>
-                    <Plus size={16} />
-                    <span>Add Product</span>
+                    <Plus size={16} /><span>Add Product</span>
                   </button>
                 </div>
               </div>
@@ -556,15 +565,13 @@ export default function App() {
                           <td><strong>{p.name}</strong></td>
                           <td>{p.description || '—'}</td>
                           <td style={{ color: 'var(--accent-primary)', fontWeight: '700' }}>${typeof p.price === 'number' ? p.price.toFixed(2) : p.price}</td>
-                          <td>
-                            <span className="clay-badge clay-badge-active">{p.stockQuantity} units</span>
-                          </td>
+                          <td><span className="clay-badge clay-badge-active">{p.stockQuantity} units</span></td>
                         </tr>
                       ))
                     ) : (
                       <tr>
                         <td colSpan="5" style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
-                          No products found for tenant <strong>{currentTenantId}</strong>. Create one above!
+                          No products found for tenant <strong>{currentTenantId}</strong>.
                         </td>
                       </tr>
                     )}
@@ -579,24 +586,15 @@ export default function App() {
             <div>
               <div className="panel-header">
                 <div className="panel-title-group">
-                  <h2>Tenant Orders</h2>
+                  <h2>Tenant Orders Ledger</h2>
                   <p>Filtered by <strong>X-Tenant-ID: {currentTenantId}</strong></p>
                 </div>
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Search size={16} color="var(--text-muted)" />
-                    <input 
-                      type="email"
-                      className="clay-input-field" 
-                      style={{ padding: '8px 12px', fontSize: '0.85rem' }}
-                      placeholder="Filter by customer email..."
-                      value={orderEmailFilter}
-                      onChange={(e) => setOrderEmailFilter(e.target.value)}
-                    />
-                  </div>
+                  <button className="clay-btn-secondary" onClick={() => exportToCSV(orders.content, 'orders')}>
+                    <Download size={16} /><span>Export CSV</span>
+                  </button>
                   <button className="clay-btn-primary" onClick={() => setModalType('order')}>
-                    <Plus size={16} />
-                    <span>Create Order</span>
+                    <Plus size={16} /><span>Create Order</span>
                   </button>
                 </div>
               </div>
@@ -618,9 +616,7 @@ export default function App() {
                           <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{o.id.substring(0, 8)}...</td>
                           <td><strong>{o.customerEmail}</strong></td>
                           <td style={{ color: 'var(--accent-primary)', fontWeight: '700' }}>${typeof o.totalAmount === 'number' ? o.totalAmount.toFixed(2) : o.totalAmount}</td>
-                          <td>
-                            <span className={`clay-badge clay-badge-${o.status.toLowerCase()}`}>{o.status}</span>
-                          </td>
+                          <td><span className={`clay-badge clay-badge-${o.status.toLowerCase()}`}>{o.status}</span></td>
                         </tr>
                       ))
                     ) : (
@@ -646,49 +642,33 @@ export default function App() {
                 </div>
                 <button className="clay-btn-primary" onClick={runIsolationTest} disabled={isTestingIsolation}>
                   <RefreshCw size={16} className={isTestingIsolation ? 'animate-spin' : ''} />
-                  <span>Run Isolation Verification Test</span>
+                  <span>Run Isolation Test</span>
                 </button>
               </div>
 
               <div className="rls-test-card" style={{ marginTop: '20px' }}>
                 <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
                   <Lock size={16} style={{ display: 'inline', marginRight: '6px', verticalAlignment: 'text-bottom' }} />
-                  This test sends two simultaneous requests to <code>/api/v1/products</code>: one with <code>X-Tenant-ID: tenant-alpha</code> and another with <code>X-Tenant-ID: tenant-beta</code>. PostgreSQL Row-Level Security ensures each query returns strictly its tenant's data.
+                  This test sends two simultaneous requests to <code>/api/v1/products</code>: one for <code>tenant-alpha</code> and another for <code>tenant-beta</code>. PostgreSQL Row-Level Security ensures each query returns strictly its tenant's data.
                 </div>
 
                 <div className="rls-comparison-grid" style={{ marginTop: '16px' }}>
-                  {/* Tenant Alpha Column */}
                   <div className="rls-tenant-box">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <strong style={{ color: 'var(--accent-primary)' }}>Tenant Alpha View</strong>
-                      <span className="clay-pill-count">{alphaProducts.length} items</span>
-                    </div>
-                    {alphaProducts.length > 0 ? (
-                      alphaProducts.map(p => (
-                        <div key={p.id} style={{ padding: '8px', background: 'var(--bg-primary)', borderRadius: '10px', fontSize: '0.85rem' }}>
-                          <strong>{p.name}</strong> (${p.price})
-                        </div>
-                      ))
-                    ) : (
-                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Click 'Run Isolation Verification Test' above</div>
-                    )}
+                    <strong style={{ color: 'var(--accent-primary)' }}>Tenant Alpha View</strong>
+                    {alphaProducts.map(p => (
+                      <div key={p.id} style={{ padding: '8px', background: 'var(--bg-primary)', borderRadius: '10px', fontSize: '0.85rem' }}>
+                        <strong>{p.name}</strong> (${p.price})
+                      </div>
+                    ))}
                   </div>
 
-                  {/* Tenant Beta Column */}
                   <div className="rls-tenant-box">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <strong style={{ color: 'var(--accent-success)' }}>Tenant Beta View</strong>
-                      <span className="clay-pill-count">{betaProducts.length} items</span>
-                    </div>
-                    {betaProducts.length > 0 ? (
-                      betaProducts.map(p => (
-                        <div key={p.id} style={{ padding: '8px', background: 'var(--bg-primary)', borderRadius: '10px', fontSize: '0.85rem' }}>
-                          <strong>{p.name}</strong> (${p.price})
-                        </div>
-                      ))
-                    ) : (
-                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Click 'Run Isolation Verification Test' above</div>
-                    )}
+                    <strong style={{ color: 'var(--accent-success)' }}>Tenant Beta View</strong>
+                    {betaProducts.map(p => (
+                      <div key={p.id} style={{ padding: '8px', background: 'var(--bg-primary)', borderRadius: '10px', fontSize: '0.85rem' }}>
+                        <strong>{p.name}</strong> (${p.price})
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -709,23 +689,17 @@ export default function App() {
                 <div className="clay-item-card">
                   <div className="card-header-row">
                     <span className="card-item-title">Actuator Health</span>
-                    <span className={`clay-badge clay-badge-${health.status === 'UP' ? 'active' : 'pending'}`}>
-                      {health.status}
-                    </span>
+                    <span className={`clay-badge clay-badge-${health.status === 'UP' ? 'active' : 'pending'}`}>{health.status}</span>
                   </div>
-                  <div className="card-item-subtitle">
-                    Monitors database connectivity, disk space, and application liveness.
-                  </div>
+                  <div className="card-item-subtitle">Monitors database connectivity and liveness.</div>
                 </div>
 
                 <div className="clay-item-card">
                   <div className="card-header-row">
-                    <span className="card-item-title">OpenAPI 3.0</span>
+                    <span className="card-item-title">JWT Security</span>
                     <span className="clay-badge clay-badge-completed">ACTIVE</span>
                   </div>
-                  <div className="card-item-subtitle">
-                    Swagger UI for interactive testing of tenant headers.
-                  </div>
+                  <div className="card-item-subtitle">HMAC SHA-256 signed bearer tokens.</div>
                 </div>
               </div>
             </div>
@@ -804,42 +778,28 @@ export default function App() {
             <form onSubmit={handleCreateOrder} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div className="clay-input-group">
                 <label className="clay-input-label">Customer Email</label>
-                <input name="customerEmail" type="email" className="clay-input-field" placeholder="buyer@corp.com" required />
+                <input name="customerEmail" type="email" className="clay-input-field" placeholder="client@company.com" required />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="clay-input-group">
-                  <label className="clay-input-label">Total Amount ($)</label>
-                  <input name="totalAmount" type="number" step="0.01" min="0.01" className="clay-input-field" placeholder="499.00" required />
-                </div>
-                <div className="clay-input-group">
-                  <label className="clay-input-label">Status</label>
-                  <select name="status" className="clay-input-field">
-                    <option value="PENDING">PENDING</option>
-                    <option value="COMPLETED">COMPLETED</option>
-                    <option value="CANCELLED">CANCELLED</option>
-                  </select>
-                </div>
+              <div className="clay-input-group">
+                <label className="clay-input-label">Total Amount ($)</label>
+                <input name="totalAmount" type="number" step="0.01" min="0.01" className="clay-input-field" placeholder="299.99" required />
+              </div>
+              <div className="clay-input-group">
+                <label className="clay-input-label">Status</label>
+                <select name="status" className="clay-select" defaultValue="COMPLETED">
+                  <option value="COMPLETED">COMPLETED</option>
+                  <option value="PENDING">PENDING</option>
+                  <option value="CANCELLED">CANCELLED</option>
+                </select>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '10px' }}>
                 <button type="button" className="clay-btn-secondary" onClick={() => setModalType(null)}>Cancel</button>
-                <button type="submit" className="clay-btn-primary">Create Order</button>
+                <button type="submit" className="clay-btn-primary">Submit Order</button>
               </div>
             </form>
           </div>
         </div>
       )}
-
-      {/* Toast Notifications Container */}
-      <div className="clay-toast-container">
-        {toasts.map(t => (
-          <div key={t.id} className={`clay-toast toast-${t.type}`}>
-            {t.type === 'success' && <CheckCircle2 size={18} color="var(--accent-success)" />}
-            {t.type === 'error' && <AlertCircle size={18} color="var(--accent-danger)" />}
-            {t.type === 'info' && <Activity size={18} color="var(--accent-primary)" />}
-            <span>{t.message}</span>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

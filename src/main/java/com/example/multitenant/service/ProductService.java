@@ -7,6 +7,8 @@ import com.example.multitenant.repository.TenantRepository;
 import com.example.multitenant.web.dto.CreateProductRequest;
 import com.example.multitenant.web.exception.ResourceNotFoundException;
 import com.example.multitenant.web.exception.TenantNotFoundException;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -27,13 +29,13 @@ public class ProductService {
     }
 
     @Transactional
+    @CacheEvict(value = "productsCache", allEntries = true)
     public Product createProduct(CreateProductRequest request) {
         String tenantId = TenantContext.getTenantId();
         if (tenantId == null || tenantId.isBlank()) {
             throw new IllegalStateException("Cannot create product: No active tenant context found in request headers");
         }
 
-        // Validate the tenant exists
         if (!tenantRepository.existsById(tenantId)) {
             throw new TenantNotFoundException(tenantId);
         }
@@ -61,6 +63,7 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "productsCache", key = "T(com.example.multitenant.context.TenantContext).getTenantId() + '-' + #id")
     public Product getProductById(String id) {
         return productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", id));
