@@ -44,8 +44,9 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Public endpoints
                 .requestMatchers("/api/v1/auth/**").permitAll()
-                .requestMatchers("/actuator/health/**").permitAll()
-                .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/api-docs/**", "/v3/api-docs/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/tenants/**", "/api/v1/products/**", "/api/v1/orders/**").permitAll()
+                .requestMatchers("/actuator/**").permitAll()
+                .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/api-docs/**", "/v3/api-docs/**", "/h2-console/**").permitAll()
                 .requestMatchers("/", "/index.html", "/assets/**", "/static/**").permitAll()
                 // Tenant admin routes
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/tenants/**").hasRole("SYS_ADMIN")
@@ -54,6 +55,7 @@ public class SecurityConfig {
                 // Everything else needs authentication
                 .anyRequest().authenticated()
             )
+            .headers(headers -> headers.frameOptions(frame -> frame.disable()))
             .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
             .build();
     }

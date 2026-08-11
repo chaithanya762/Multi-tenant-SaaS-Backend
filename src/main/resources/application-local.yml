@@ -26,5 +26,13 @@ spring:
         dialect: org.hibernate.dialect.H2Dialect
         tenant_identifier_resolver: com.example.multitenant.config.TenantIdentifierResolver
 
+  cache:
+    type: simple
+
   flyway:
     enabled: false
+
+management:
+  health:
+    redis:
+      enabled: false
