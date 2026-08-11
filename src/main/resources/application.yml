@@ -17,7 +17,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
@@ -28,8 +28,28 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000ms
+
+  cache:
+    type: redis
+    redis:
+      time-to-live: 300000
+
 server:
   port: 8080
+  shutdown: graceful
+
+spring.lifecycle.timeout-per-shutdown-phase: 30s
+
+# --- JWT Configuration ---
+jwt:
+  secret: ${JWT_SECRET:MultiTenantSaaSSecretKey2026SuperSecureEnterpriseKeyForJWT99xyzABC}
+  expiration-ms: ${JWT_EXPIRY_MS:900000}
+  refresh-expiration-ms: ${JWT_REFRESH_EXPIRY_MS:2592000000}
 
 # --- Actuator & Observability ---
 management:
@@ -40,6 +60,8 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+      probes:
+        enabled: true
   info:
     env:
       enabled: true
@@ -47,8 +69,8 @@ management:
 info:
   app:
     name: Multi-Tenant SaaS Backend
-    description: Multi-Tenant SaaS Backend with PostgreSQL RLS & Shared Schema
-    version: 0.0.1-SNAPSHOT
+    description: Enterprise Multi-Tenant SaaS Backend with PostgreSQL RLS, RBAC, Audit Log & Webhooks
+    version: 1.0.0
 
 # --- OpenAPI / Swagger ---
 springdoc:

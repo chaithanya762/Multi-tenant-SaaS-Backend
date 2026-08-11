@@ -9,10 +9,6 @@ import org.hibernate.annotations.TenantId;
 
 import java.time.Instant;
 
-/**
- * Base abstract mapped superclass for all tenant-partitioned entities.
- * Enforces automatic population of tenantId and timestamp fields.
- */
 @MappedSuperclass
 public abstract class AbstractTenantEntity {
 
@@ -26,28 +22,21 @@ public abstract class AbstractTenantEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt = Instant.now();
 
-    public String getTenantId() {
-        return tenantId;
-    }
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
 
-    public void setTenantId(String tenantId) {
-        this.tenantId = tenantId;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
+    public String getTenantId() { return tenantId; }
+    public void setTenantId(String tenantId) { this.tenantId = tenantId; }
+    public Instant getCreatedAt() { return createdAt; }
+    public Instant getUpdatedAt() { return updatedAt; }
+    public Instant getDeletedAt() { return deletedAt; }
+    public void setDeletedAt(Instant deletedAt) { this.deletedAt = deletedAt; }
+    public boolean isDeleted() { return deletedAt != null; }
 
     @PrePersist
     public void onPrePersist() {
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
-
-        // Automatically populate tenant_id from ThreadLocal context if not manually set
         if (this.tenantId == null || this.tenantId.isBlank()) {
             String currentTenant = TenantContext.getTenantId();
             if (currentTenant != null && !currentTenant.isBlank()) {
@@ -57,7 +46,5 @@ public abstract class AbstractTenantEntity {
     }
 
     @PreUpdate
-    public void onPreUpdate() {
-        this.updatedAt = Instant.now();
-    }
+    public void onPreUpdate() { this.updatedAt = Instant.now(); }
 }

@@ -1,11 +1,15 @@
 package com.example.multitenant.web;
 
-import com.example.multitenant.security.JwtTokenProvider;
+import com.example.multitenant.service.AuthService;
+import com.example.multitenant.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,49 +17,86 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/auth")
-@Tag(name = "Authentication", description = "Tenant JWT Token Generation Endpoint")
+@Tag(name = "Authentication", description = "User Authentication, Registration & Token Management")
 public class AuthController {
 
-    private final JwtTokenProvider jwtTokenProvider;
+    private final AuthService authService;
+    private final UserService userService;
 
-    public AuthController(JwtTokenProvider jwtTokenProvider) {
-        this.jwtTokenProvider = jwtTokenProvider;
+    public AuthController(AuthService authService, UserService userService) {
+        this.authService = authService;
+        this.userService = userService;
     }
 
-    @PostMapping("/token")
-    @Operation(summary = "Generate JWT Auth Token for Tenant User", description = "Generates a signed JWT containing tenant_id claim for authenticated operations")
-    public ResponseEntity<TokenResponse> generateToken(@Valid @RequestBody TokenRequest request) {
-        String token = jwtTokenProvider.generateToken(
-                request.getUsername(),
-                request.getTenantId(),
-                request.getRole() != null ? request.getRole() : "ROLE_TENANT_USER"
+    @PostMapping("/login")
+    @Operation(summary = "Login with username and password", description = "Returns a JWT access token (15 min) and a refresh token (30 days)")
+    public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
+        AuthService.LoginResult result = authService.login(
+            request.getTenantId(), request.getUsername(), request.getPassword());
+        TokenResponse response = new TokenResponse(
+            result.accessToken(),
+            result.refreshToken(),
+            result.user().getTenantId(),
+            result.user().getUsername(),
+            result.user().getRole(),
+            900L
         );
-
-        TokenResponse response = new TokenResponse();
-        response.setToken(token);
-        response.setTenantId(request.getTenantId());
-        response.setUsername(request.getUsername());
-        response.setExpiresInSeconds(86400);
-
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/register")
+    @Operation(summary = "Register a new user within a tenant")
+    public ResponseEntity<Map<String, String>> register(@Valid @RequestBody RegisterRequest request) {
+        userService.createUser(
+            request.getTenantId(),
+            request.getUsername(),
+            request.getEmail(),
+            request.getPassword(),
+            "ROLE_TENANT_USER"
+        );
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(Map.of("message", "User registered successfully"));
+    }
+
+    @PostMapping("/refresh")
+    @Operation(summary = "Exchange refresh token for a new access token")
+    public ResponseEntity<Map<String, String>> refresh(@Valid @RequestBody RefreshRequest request) {
+        String newAccessToken = authService.refreshAccessToken(request.getRefreshToken());
+        return ResponseEntity.ok(Map.of(
+            "access_token", newAccessToken,
+            "expires_in", "900"
+        ));
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "Revoke refresh token (logout)")
+    public ResponseEntity<Map<String, String>> logout(@Valid @RequestBody RefreshRequest request) {
+        authService.logout(request.getRefreshToken());
+        return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
+    }
+
+    // ---- Request / Response DTOs ----
+
     @Data
-    public static class TokenRequest {
-        @NotBlank(message = "Tenant ID is required")
-        private String tenantId;
-
-        @NotBlank(message = "Username is required")
-        private String username;
-
-        private String role;
+    public static class LoginRequest {
+        @NotBlank private String tenantId;
+        @NotBlank private String username;
+        @NotBlank private String password;
     }
 
     @Data
-    public static class TokenResponse {
-        private String token;
-        private String tenantId;
-        private String username;
-        private long expiresInSeconds;
+    public static class RegisterRequest {
+        @NotBlank private String tenantId;
+        @NotBlank @Size(min = 3, max = 50) private String username;
+        @NotBlank @Email private String email;
+        @NotBlank @Size(min = 8, max = 128) private String password;
     }
+
+    @Data
+    public static class RefreshRequest {
+        @NotBlank private String refreshToken;
+    }
+
+    public record TokenResponse(String accessToken, String refreshToken, String tenantId,
+                                 String username, String role, long expiresInSeconds) {}
 }

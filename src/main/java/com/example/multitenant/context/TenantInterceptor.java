@@ -1,5 +1,6 @@
 package com.example.multitenant.context;
 
+import com.example.multitenant.repository.TenantRepository;
 import com.example.multitenant.security.JwtTokenProvider;
 import com.example.multitenant.web.exception.MissingTenantHeaderException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -12,12 +13,6 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.util.Set;
 
-/**
- * Spring Web Interceptor that extracts tenant identification from:
- * 1. Bearer JWT Token in Authorization header (Primary)
- * 2. Host header subdomain (e.g. acme.localhost -> acme)
- * 3. X-Tenant-ID header (Fallback)
- */
 @Component
 public class TenantInterceptor implements HandlerInterceptor {
 
@@ -26,26 +21,41 @@ public class TenantInterceptor implements HandlerInterceptor {
     public static final String AUTHORIZATION_HEADER = "Authorization";
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final TenantRepository tenantRepository;
 
     @Autowired
-    public TenantInterceptor(JwtTokenProvider jwtTokenProvider) {
+    public TenantInterceptor(JwtTokenProvider jwtTokenProvider, TenantRepository tenantRepository) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.tenantRepository = tenantRepository;
     }
 
     private static final Set<String> TENANT_REQUIRED_PREFIXES = Set.of(
             "/api/v1/products",
-            "/api/v1/orders"
+            "/api/v1/orders",
+            "/api/v1/api-keys",
+            "/api/v1/webhooks",
+            "/api/v1/audit-log",
+            "/api/v1/billing",
+            "/api/v1/users"
     );
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String tenantId = resolveTenantId(request);
 
         if (tenantId != null && !tenantId.isBlank()) {
             TenantContext.setTenantId(tenantId.trim());
-        } else {
-            log.trace("No tenant ID resolved for request: {}", request.getRequestURI());
 
+            // Check if tenant is suspended or deleted
+            tenantRepository.findById(tenantId.trim()).ifPresent(tenant -> {
+                if (tenant.isSuspended()) {
+                    throw new IllegalStateException("Tenant '" + tenantId + "' is suspended: " + tenant.getSuspensionReason());
+                }
+                if (tenant.isDeleted()) {
+                    throw new IllegalStateException("Tenant '" + tenantId + "' no longer exists");
+                }
+            });
+        } else {
             String path = request.getRequestURI();
             boolean requiresTenant = TENANT_REQUIRED_PREFIXES.stream().anyMatch(path::startsWith);
             if (requiresTenant) {
@@ -57,35 +67,31 @@ public class TenantInterceptor implements HandlerInterceptor {
     }
 
     private String resolveTenantId(HttpServletRequest request) {
-        // 1. Try JWT Authorization Header
         String authHeader = request.getHeader(AUTHORIZATION_HEADER);
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             try {
                 String token = authHeader.substring(7);
                 String tenantFromJwt = jwtTokenProvider.getTenantIdFromToken(token);
-                if (tenantFromJwt != null && !tenantFromJwt.isBlank()) {
-                    return tenantFromJwt;
-                }
+                if (tenantFromJwt != null && !tenantFromJwt.isBlank()) return tenantFromJwt;
             } catch (Exception e) {
-                log.warn("Invalid JWT token provided in request: {}", e.getMessage());
+                log.warn("Invalid JWT token: {}", e.getMessage());
             }
         }
-
-        // 2. Try Subdomain Resolution from Host Header (e.g. acme.localhost or acme.saas.com)
         String host = request.getHeader("Host");
         if (host != null && host.contains(".")) {
             String[] parts = host.split("\\.");
-            if (parts.length >= 2 && !parts[0].equalsIgnoreCase("www") && !parts[0].equalsIgnoreCase("localhost") && !parts[0].matches("\\d+")) {
+            if (parts.length >= 2 && !parts[0].equalsIgnoreCase("www")
+                    && !parts[0].equalsIgnoreCase("localhost")
+                    && !parts[0].matches("\\d+")) {
                 return parts[0];
             }
         }
-
-        // 3. Fallback to X-Tenant-ID Header
         return request.getHeader(TENANT_HEADER);
     }
 
     @Override
-    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response,
+                                Object handler, Exception ex) {
         TenantContext.clear();
     }
 }

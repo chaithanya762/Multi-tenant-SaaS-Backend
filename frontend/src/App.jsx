@@ -1,805 +1,1071 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Layers, Users, Package, ShoppingCart, ShieldCheck, Activity, 
-  Plus, RefreshCw, Moon, Sun, ExternalLink, X, CheckCircle2, 
-  AlertCircle, Search, Lock, Database, WifiOff, Key, Download, Zap
-} from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
 
-const INITIAL_DEMO_TENANTS = [
-  { id: 'tenant-alpha', name: 'Alpha Corporation', status: 'ACTIVE' },
-  { id: 'tenant-beta', name: 'Beta Solutions LLC', status: 'ACTIVE' }
-];
+// --- INJECTED CSS ---
+const globalCss = `
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-const INITIAL_DEMO_PRODUCTS = {
-  'tenant-alpha': [
-    { id: 'prod-a1', name: 'Alpha Cloud Server', description: 'High performance compute node', price: 299.99, stockQuantity: 15 },
-    { id: 'prod-a2', name: 'Alpha Database Shield', description: 'Encrypted storage cluster', price: 499.00, stockQuantity: 8 }
-  ],
-  'tenant-beta': [
-    { id: 'prod-b1', name: 'Beta Analytics Suite', description: 'Real-time telemetry dashboard', price: 149.50, stockQuantity: 50 },
-    { id: 'prod-b2', name: 'Beta Edge Gateway', description: 'IoT connection hub', price: 89.00, stockQuantity: 120 }
-  ]
-};
+  :root {
+    --bg-primary: #0f111a;
+    --bg-secondary: #1a1d27;
+    --text-primary: #f8f9fa;
+    --text-secondary: #a0aab2;
+    --accent: #8b5cf6;
+    --accent-hover: #7c3aed;
+    --danger: #ef4444;
+    --success: #10b981;
+    --glass-bg: rgba(26, 29, 39, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --sidebar-width: 260px;
+  }
 
-const INITIAL_DEMO_ORDERS = {
-  'tenant-alpha': [
-    { id: 'ord-a1', customerEmail: 'admin@alphacorp.com', totalAmount: 798.99, status: 'COMPLETED' },
-    { id: 'ord-a2', customerEmail: 'devops@alphacorp.com', totalAmount: 299.99, status: 'PENDING' }
-  ],
-  'tenant-beta': [
-    { id: 'ord-b1', customerEmail: 'contact@betasolutions.io', totalAmount: 238.50, status: 'COMPLETED' }
-  ]
+  [data-theme='light'] {
+    --bg-primary: #f3f4f6;
+    --bg-secondary: #ffffff;
+    --text-primary: #111827;
+    --text-secondary: #4b5563;
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(0, 0, 0, 0.1);
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', sans-serif;
+  }
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    overflow-x: hidden;
+    transition: background-color 0.3s, color 0.3s;
+  }
+
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+  }
+
+  /* Layout */
+  .app-container {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: var(--sidebar-width);
+    border-right: 1px solid var(--glass-border);
+    display: flex;
+    flex-direction: column;
+    padding: 24px 0;
+    transition: transform 0.3s ease;
+    z-index: 100;
+  }
+
+  .sidebar-header {
+    padding: 0 24px 24px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--accent);
+  }
+
+  .nav-item {
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+  }
+
+  .nav-item:hover {
+    background: rgba(139, 92, 246, 0.1);
+    color: var(--accent);
+  }
+
+  .nav-item.active {
+    background: linear-gradient(90deg, rgba(139, 92, 246, 0.15) 0%, transparent 100%);
+    color: var(--accent);
+    border-left: 3px solid var(--accent);
+  }
+
+  .nav-icon {
+    font-size: 1.2rem;
+  }
+
+  /* Main Content */
+  .main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    max-width: calc(100vw - var(--sidebar-width));
+  }
+
+  .topbar {
+    height: 70px;
+    border-bottom: 1px solid var(--glass-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 32px;
+  }
+
+  .page-content {
+    padding: 32px;
+    flex: 1;
+    overflow-y: auto;
+    animation: fadeIn 0.4s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Components */
+  .card {
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card h3 {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+  }
+
+  .stat-card .value {
+    font-size: 2rem;
+    font-weight: 700;
+  }
+
+  .btn {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    color: var(--text-primary);
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: var(--accent-hover);
+  }
+
+  .btn-danger {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+    border-color: rgba(239, 68, 68, 0.2);
+  }
+
+  .btn-danger:hover {
+    background: var(--danger);
+    color: white;
+  }
+
+  input, select {
+    background: var(--bg-primary);
+    border: 1px solid var(--glass-border);
+    color: var(--text-primary);
+    padding: 12px 16px;
+    border-radius: 8px;
+    width: 100%;
+    margin-bottom: 16px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input:focus, select:focus {
+    border-color: var(--accent);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 16px;
+  }
+
+  th, td {
+    padding: 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--glass-border);
+  }
+
+  th {
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+  }
+
+  .badge {
+    padding: 4px 10px;
+    border-radius: 100px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .badge-success { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+  .badge-danger { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+  .badge-primary { background: rgba(139, 92, 246, 0.1); color: var(--accent); }
+
+  /* Login / Hero */
+  .hero-bg {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.15) 0%, transparent 70%), var(--bg-primary);
+    z-index: -1;
+  }
+
+  .login-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .login-card {
+    width: 100%;
+    max-width: 420px;
+    padding: 40px;
+  }
+
+  .login-card h2 {
+    font-size: 1.75rem;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+
+  .login-card p {
+    color: var(--text-secondary);
+    text-align: center;
+    margin-bottom: 32px;
+  }
+
+  /* Toasts */
+  .toast-container {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .toast {
+    padding: 16px 24px;
+    border-radius: 8px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    animation: slideIn 0.3s ease-out forwards;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 300px;
+  }
+  @keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  .flex-between { display: flex; justify-content: space-between; align-items: center; }
+  .flex-gap { display: flex; gap: 12px; align-items: center; }
+  
+  /* Skeleton */
+  .skeleton {
+    background: linear-gradient(90deg, var(--glass-border) 25%, rgba(255,255,255,0.05) 50%, var(--glass-border) 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    border-radius: 4px;
+  }
+  @keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  @media (max-width: 768px) {
+    .sidebar { transform: translateX(-100%); position: fixed; height: 100vh; background: var(--glass-bg); backdrop-filter: blur(20px); }
+    .sidebar.open { transform: translateX(0); }
+    .main-content { max-width: 100vw; }
+  }
+`;
+
+// --- MOCK DATA FOR DEMO MODE ---
+const mockData = {
+  tenants: [{ id: 't1', name: 'Acme Corp' }, { id: 't2', name: 'Globex' }],
+  products: [{ id: 1, name: 'SaaS Basic', price: 29 }, { id: 2, name: 'SaaS Pro', price: 99 }],
+  orders: [{ id: 101, email: 'user@acme.com', total: 29, status: 'Completed' }, { id: 102, email: 'admin@globex.com', total: 99, status: 'Pending' }],
+  users: [{ id: 1, username: 'admin', email: 'admin@acme.com', active: true }],
+  apiKeys: [{ id: 'k1', name: 'Prod Key', prefix: 'sk_live_...a1b2', scopes: 'read,write' }],
+  auditLog: [{ id: 1, action: 'CREATE', resource: 'Order', user: 'admin', timestamp: new Date().toISOString() }],
+  billing: { apiCalls: 15420, ordersCreated: 342, plan: 'Pro', currentCycleCost: 150.00 },
+  webhooks: [{ id: 'w1', url: 'https://acme.com/hook', events: 'order.created' }]
 };
 
 export default function App() {
-  const [theme, setTheme] = useState('light');
-  const [activeTab, setActiveTab] = useState('tenants');
-  const [activeTenant, setActiveTenant] = useState('tenant-alpha');
-  const [customTenant, setCustomTenant] = useState('');
-  const [isCustomTenantMode, setIsCustomTenantMode] = useState(false);
-
-  // JWT & Rate Limit States
-  const [jwtToken, setJwtToken] = useState('');
-  const [useJwtAuth, setUseJwtAuth] = useState(false);
-  const [rateLimitRemaining, setRateLimitRemaining] = useState(60);
-
-  // Data States
-  const [tenants, setTenants] = useState(INITIAL_DEMO_TENANTS);
-  const [products, setProducts] = useState({ content: [], totalElements: 0, totalPages: 0, page: 0 });
-  const [orders, setOrders] = useState({ content: [], totalElements: 0, totalPages: 0, page: 0 });
-  const [health, setHealth] = useState({ status: 'OFFLINE' });
+  const [token, setToken] = useState(localStorage.getItem('saas_token') || '');
+  const [tenantId, setTenantId] = useState(localStorage.getItem('saas_tenant') || '');
   const [isDemoMode, setIsDemoMode] = useState(false);
-
-  // Filters & Pagination
-  const [orderEmailFilter, setOrderEmailFilter] = useState('');
-  const [productPage, setProductPage] = useState(0);
-  const [orderPage, setOrderPage] = useState(0);
-
-  // Isolation Workbench Test Data
-  const [alphaProducts, setAlphaProducts] = useState([]);
-  const [betaProducts, setBetaProducts] = useState([]);
-  const [isTestingIsolation, setIsTestingIsolation] = useState(false);
-
-  // Modals & Toasts
-  const [modalType, setModalType] = useState(null);
+  const [theme, setTheme] = useState('dark');
   const [toasts, setToasts] = useState([]);
+  
+  // Navigation State
+  const [currentTab, setCurrentTab] = useState('Dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const addToast = (message, type = 'info') => {
+  // Initialize CSS
+  useEffect(() => {
+    const styleSheet = document.createElement("style");
+    styleSheet.type = "text/css";
+    styleSheet.innerText = globalCss;
+    document.head.appendChild(styleSheet);
+    return () => document.head.removeChild(styleSheet);
+  }, []);
+
+  useEffect(() => {
+    document.body.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  const addToast = useCallback((message, type = 'info') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
-    }, 4000);
-  };
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    document.documentElement.setAttribute('data-theme', newTheme);
-  };
-
-  const currentTenantId = isCustomTenantMode ? customTenant : activeTenant;
-
-  const apiFetch = async (url, options = {}) => {
-    const headers = {
-      'Content-Type': 'application/json',
-      ...(options.headers || {})
-    };
-
-    if (useJwtAuth && jwtToken) {
-      headers['Authorization'] = `Bearer ${jwtToken}`;
-    } else if (currentTenantId && !options.skipTenantHeader) {
-      headers['X-Tenant-ID'] = currentTenantId;
-    }
-
-    try {
-      const res = await fetch(url, { ...options, headers });
-      
-      // Update Rate Limit Gauge
-      const remainingHeader = res.headers.get('X-RateLimit-Remaining');
-      if (remainingHeader !== null) {
-        setRateLimitRemaining(parseInt(remainingHeader, 10));
-      }
-
-      if (res.status === 429) {
-        addToast('429 Too Many Requests: Tenant quota exceeded!', 'error');
-        throw new Error('Tenant quota exceeded (60 req/min).');
-      }
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP ${res.status}: ${res.statusText}`);
-      }
-      const data = await res.json();
-      setIsDemoMode(false);
-      return data;
-    } catch (err) {
-      console.warn(`Backend connection notice for ${url}:`, err.message);
-      if (err.message.includes('429')) throw err;
-      setIsDemoMode(true);
-      throw err;
-    }
-  };
-
-  useEffect(() => {
-    checkHealthAndLoad();
+    }, 3000);
   }, []);
 
-  const checkHealthAndLoad = async () => {
-    try {
-      const data = await apiFetch('/actuator/health', { skipTenantHeader: true });
-      setHealth(data);
-      loadTenants();
-      addToast('Connected to Spring Boot enterprise backend!', 'success');
-    } catch (err) {
-      setHealth({ status: 'OFFLINE', error: err.message });
-      setIsDemoMode(true);
-      loadDemoData();
-      addToast('Backend offline. Running in Claymorphic Interactive Demo Mode.', 'info');
-    }
+  const handleLogout = () => {
+    localStorage.removeItem('saas_token');
+    localStorage.removeItem('saas_tenant');
+    setToken('');
+    setTenantId('');
+    addToast('Logged out successfully', 'success');
   };
 
-  const loadDemoData = () => {
-    const tid = currentTenantId || 'tenant-alpha';
-    const pList = INITIAL_DEMO_PRODUCTS[tid] || [];
-    setProducts({ content: pList, totalElements: pList.length, totalPages: 1, page: 0 });
-
-    const oList = INITIAL_DEMO_ORDERS[tid] || [];
-    setOrders({ content: oList, totalElements: oList.length, totalPages: 1, page: 0 });
-  };
-
-  useEffect(() => {
+  const apiFetch = useCallback(async (endpoint, options = {}) => {
     if (isDemoMode) {
-      loadDemoData();
-    } else {
-      if (activeTab === 'products') loadProducts();
-      if (activeTab === 'orders') loadOrders();
+      // Simulate network delay
+      await new Promise(r => setTimeout(r, 400));
+      return { _demo: true };
     }
-  }, [activeTenant, customTenant, isCustomTenantMode, activeTab, isDemoMode, useJwtAuth, jwtToken]);
 
-  const loadTenants = async () => {
     try {
-      const data = await apiFetch('/api/v1/tenants', { skipTenantHeader: true });
-      setTenants(Array.isArray(data) ? data : INITIAL_DEMO_TENANTS);
-    } catch (err) {
-      setTenants(INITIAL_DEMO_TENANTS);
-    }
-  };
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer \${token}` }),
+        ...(tenantId && { 'X-Tenant-ID': tenantId }),
+        ...(options.headers || {})
+      };
 
-  const loadProducts = async () => {
-    try {
-      const data = await apiFetch(`/api/v1/products?page=${productPage}&size=6`);
-      setProducts(data);
-    } catch (err) {
-      loadDemoData();
-    }
-  };
-
-  const loadOrders = async () => {
-    try {
-      let url = `/api/v1/orders?page=${orderPage}&size=6`;
-      if (orderEmailFilter) {
-        url = `/api/v1/orders?email=${encodeURIComponent(orderEmailFilter)}`;
+      const response = await fetch(`/api\${endpoint}`, { ...options, headers });
+      
+      if (response.status === 401) {
+        handleLogout();
+        addToast('Session expired. Please login again.', 'danger');
+        throw new Error('Unauthorized');
       }
-      const data = await apiFetch(url);
-      if (Array.isArray(data)) {
-        setOrders({ content: data, totalElements: data.length, totalPages: 1, page: 0 });
-      } else {
-        setOrders(data);
+      if (response.status === 429) {
+        addToast('Rate limit exceeded. Please slow down.', 'danger');
+        throw new Error('Rate Limited');
       }
-    } catch (err) {
-      loadDemoData();
-    }
-  };
-
-  // Issue JWT Token
-  const issueJwtToken = async () => {
-    try {
-      const data = await apiFetch('/api/v1/auth/token', {
-        method: 'POST',
-        body: JSON.stringify({
-          tenantId: currentTenantId,
-          username: 'admin@saas.com',
-          role: 'ROLE_TENANT_ADMIN'
-        }),
-        skipTenantHeader: true
-      });
-      setJwtToken(data.token);
-      setUseJwtAuth(true);
-      addToast(`Generated JWT Token for tenant '${currentTenantId}'!`, 'success');
-    } catch (err) {
-      const dummyToken = `eyJhbGciOiJIUzI1NiJ9.tenant_${currentTenantId}.demo_signature`;
-      setJwtToken(dummyToken);
-      setUseJwtAuth(true);
-      addToast(`Generated Demo JWT Token for '${currentTenantId}'`, 'info');
-    }
-  };
-
-  // Export CSV Helper
-  const exportToCSV = (data, filename) => {
-    if (!data || data.length === 0) {
-      addToast('No data available to export', 'error');
-      return;
-    }
-    const headers = Object.keys(data[0]).join(',');
-    const rows = data.map(obj => Object.values(obj).map(v => `"${v}"`).join(','));
-    const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `${filename}_${currentTenantId}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    addToast(`Exported ${data.length} records to CSV!`, 'success');
-  };
-
-  const runIsolationTest = async () => {
-    setIsTestingIsolation(true);
-    if (!isDemoMode) {
-      try {
-        const alphaRes = await apiFetch('/api/v1/products?page=0&size=10', {
-          headers: { 'X-Tenant-ID': 'tenant-alpha' },
-          skipTenantHeader: true
-        });
-        const betaRes = await apiFetch('/api/v1/products?page=0&size=10', {
-          headers: { 'X-Tenant-ID': 'tenant-beta' },
-          skipTenantHeader: true
-        });
-        setAlphaProducts(alphaRes.content || []);
-        setBetaProducts(betaRes.content || []);
-        addToast('Live PostgreSQL RLS data isolation verified!', 'success');
-      } catch (err) {
-        addToast(`Isolation test error: ${err.message}`, 'error');
+      if (!response.ok) {
+        throw new Error(`API Error: \${response.statusText}`);
       }
-    } else {
-      setTimeout(() => {
-        setAlphaProducts(INITIAL_DEMO_PRODUCTS['tenant-alpha']);
-        setBetaProducts(INITIAL_DEMO_PRODUCTS['tenant-beta']);
-        addToast('Demo RLS isolation verified!', 'success');
-      }, 500);
-    }
-    setIsTestingIsolation(false);
-  };
 
-  const handleCreateTenant = async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const newT = {
-      id: formData.get('tenantId'),
-      name: formData.get('tenantName'),
-      status: 'ACTIVE'
-    };
-
-    if (!isDemoMode) {
-      try {
-        await apiFetch('/api/v1/tenants', {
-          method: 'POST',
-          body: JSON.stringify({ id: newT.id, name: newT.name }),
-          skipTenantHeader: true
-        });
-        addToast(`Tenant '${newT.name}' onboarded! Default catalog provisioned via Async Event listener.`, 'success');
-        loadTenants();
-      } catch (err) {
-        addToast(err.message, 'error');
-        return;
+      // Handle 204 No Content
+      const text = await response.text();
+      return text ? JSON.parse(text) : {};
+      
+    } catch (error) {
+      if (error.message === 'Failed to fetch' || error.message.includes('NetworkError')) {
+        setIsDemoMode(true);
+        addToast('Backend unreachable. Switched to Demo Mode with mock data.', 'primary');
+        return { _demo: true };
       }
-    } else {
-      setTenants(prev => [...prev, newT]);
-      addToast(`Tenant '${newT.name}' added to session!`, 'success');
+      throw error;
     }
-    setModalType(null);
-  };
+  }, [token, tenantId, isDemoMode, addToast]);
 
-  const handleCreateProduct = async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const newP = {
-      id: `prod-${Date.now()}`,
-      name: formData.get('name'),
-      description: formData.get('description'),
-      price: parseFloat(formData.get('price')),
-      stockQuantity: parseInt(formData.get('stockQuantity'), 10)
-    };
+  if (!token) {
+    return (
+      <AuthScreen 
+        setToken={(t) => { setToken(t); localStorage.setItem('saas_token', t); }}
+        setTenantId={(t) => { setTenantId(t); localStorage.setItem('saas_tenant', t); }}
+        apiFetch={apiFetch}
+        addToast={addToast}
+        setIsDemoMode={setIsDemoMode}
+      />
+    );
+  }
 
-    if (!isDemoMode) {
-      try {
-        await apiFetch('/api/v1/products', {
-          method: 'POST',
-          body: JSON.stringify(newP)
-        });
-        addToast(`Product '${newP.name}' created & cache updated!`, 'success');
-        loadProducts();
-      } catch (err) {
-        addToast(err.message, 'error');
-        return;
-      }
-    } else {
-      setProducts(prev => ({
-        ...prev,
-        content: [newP, ...prev.content],
-        totalElements: prev.totalElements + 1
-      }));
-      addToast(`Product '${newP.name}' added in Demo Mode!`, 'success');
-    }
-    setModalType(null);
-  };
-
-  const handleCreateOrder = async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const newO = {
-      id: `ord-${Date.now()}`,
-      customerEmail: formData.get('customerEmail'),
-      totalAmount: parseFloat(formData.get('totalAmount')),
-      status: formData.get('status')
-    };
-
-    if (!isDemoMode) {
-      try {
-        await apiFetch('/api/v1/orders', {
-          method: 'POST',
-          body: JSON.stringify(newO)
-        });
-        addToast(`Order created for ${newO.customerEmail}!`, 'success');
-        loadOrders();
-      } catch (err) {
-        addToast(err.message, 'error');
-        return;
-      }
-    } else {
-      setOrders(prev => ({
-        ...prev,
-        content: [newO, ...prev.content],
-        totalElements: prev.totalElements + 1
-      }));
-      addToast(`Order created in Demo Mode!`, 'success');
-    }
-    setModalType(null);
-  };
+  const tabs = [
+    { name: 'Dashboard', icon: '🏠' },
+    { name: 'Tenants', icon: '🏢' },
+    { name: 'Products', icon: '📦' },
+    { name: 'Orders', icon: '🛒' },
+    { name: 'Users', icon: '👥' },
+    { name: 'API Keys', icon: '🔑' },
+    { name: 'Audit Log', icon: '📋' },
+    { name: 'Billing', icon: '💳' },
+    { name: 'Webhooks', icon: '🔗' },
+    { name: 'RLS Tester', icon: '🧪' },
+  ];
 
   return (
-    <div className="app-shell">
-      {/* Toast Notifications */}
-      <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {toasts.map(t => (
-          <div key={t.id} style={{
-            padding: '12px 18px',
-            borderRadius: '16px',
-            background: t.type === 'success' ? '#10b981' : t.type === 'error' ? '#ef4444' : '#3b82f6',
-            color: '#fff',
-            fontSize: '0.88rem',
-            fontWeight: '600',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            <CheckCircle2 size={16} />
-            <span>{t.message}</span>
+    <div className="app-container">
+      {/* Background for nice glass effect */}
+      <div className="hero-bg"></div>
+
+      {/* Sidebar */}
+      <aside className={`sidebar glass \${sidebarOpen ? 'open' : ''}`}>
+        <div className="sidebar-header">
+          <span className="nav-icon">✨</span> NexusSaaS
+        </div>
+        <div style={{ flex: 1 }}>
+          {tabs.map(tab => (
+            <div 
+              key={tab.name}
+              className={`nav-item \${currentTab === tab.name ? 'active' : ''}`}
+              onClick={() => { setCurrentTab(tab.name); setSidebarOpen(false); }}
+            >
+              <span className="nav-icon">{tab.icon}</span>
+              {tab.name}
+            </div>
+          ))}
+        </div>
+        <div className="nav-item" onClick={handleLogout} style={{ marginTop: 'auto', color: 'var(--danger)' }}>
+          <span className="nav-icon">🚪</span> Logout
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="main-content">
+        <header className="topbar glass">
+          <div className="flex-gap">
+            <button className="btn" onClick={() => setSidebarOpen(!sidebarOpen)} style={{ display: 'none' /* handled via css media query in real world */ }}>☰</button>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>{currentTab}</h2>
+            {isDemoMode && <span className="badge badge-primary">DEMO MODE</span>}
+          </div>
+          <div className="flex-gap">
+            <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Tenant: <strong>{tenantId || 'None'}</strong></span>
+            <button className="btn" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+              {theme === 'dark' ? '☀️' : '🌙'}
+            </button>
+          </div>
+        </header>
+
+        <div className="page-content">
+          {currentTab === 'Dashboard' && <DashboardTab apiFetch={apiFetch} isDemoMode={isDemoMode} />}
+          {currentTab === 'Tenants' && <TenantsTab apiFetch={apiFetch} isDemoMode={isDemoMode} addToast={addToast} />}
+          {currentTab === 'Products' && <ProductsTab apiFetch={apiFetch} isDemoMode={isDemoMode} addToast={addToast} />}
+          {currentTab === 'Orders' && <OrdersTab apiFetch={apiFetch} isDemoMode={isDemoMode} addToast={addToast} />}
+          {currentTab === 'Users' && <UsersTab apiFetch={apiFetch} isDemoMode={isDemoMode} addToast={addToast} />}
+          {currentTab === 'API Keys' && <ApiKeysTab apiFetch={apiFetch} isDemoMode={isDemoMode} addToast={addToast} />}
+          {currentTab === 'Audit Log' && <AuditLogTab apiFetch={apiFetch} isDemoMode={isDemoMode} />}
+          {currentTab === 'Billing' && <BillingTab apiFetch={apiFetch} isDemoMode={isDemoMode} />}
+          {currentTab === 'Webhooks' && <WebhooksTab apiFetch={apiFetch} isDemoMode={isDemoMode} addToast={addToast} />}
+          {currentTab === 'RLS Tester' && <RlsTesterTab apiFetch={apiFetch} isDemoMode={isDemoMode} addToast={addToast} />}
+        </div>
+      </main>
+
+      {/* Toasts */}
+      <div className="toast-container">
+        {toasts.map(toast => (
+          <div key={toast.id} className={`toast glass`} style={{ borderLeft: `4px solid var(--\${toast.type === 'danger' ? 'danger' : toast.type === 'success' ? 'success' : 'accent'})` }}>
+            {toast.message}
           </div>
         ))}
       </div>
+    </div>
+  );
+}
 
-      {/* Header Navbar */}
-      <header className="clay-navbar">
-        <div className="brand-section">
-          <div className="brand-icon-clay">
-            <Layers size={26} />
-          </div>
-          <div>
-            <div className="brand-title">SaaS<span style={{ color: 'var(--accent-primary)' }}>Core</span> <span style={{ fontSize: '0.75rem', background: '#3b82f6', color: '#fff', padding: '2px 8px', borderRadius: '10px' }}>ENTERPRISE</span></div>
-            <div className="brand-subtitle">PostgreSQL RLS • JWT Auth • Rate Limiter • Cache</div>
-          </div>
-        </div>
+// ==========================================
+// TABS & COMPONENTS
+// ==========================================
 
-        <div className="header-actions">
-          {/* Rate Limit Gauge */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'var(--bg-card)', borderRadius: '16px', fontSize: '0.8rem', fontWeight: '600' }}>
-            <Zap size={14} color="#f59e0b" />
-            <span>Quota: {rateLimitRemaining}/60 req/min</span>
-          </div>
+function AuthScreen({ setToken, setTenantId, apiFetch, addToast, setIsDemoMode }) {
+  const [isLogin, setIsLogin] = useState(true);
+  const [form, setForm] = useState({ tenantId: '', username: '', email: '', password: '' });
+  const [loading, setLoading] = useState(false);
 
-          {/* JWT Auth Button */}
-          <button 
-            className={`clay-btn-${useJwtAuth ? 'primary' : 'secondary'}`} 
-            style={{ padding: '6px 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}
-            onClick={issueJwtToken}
-          >
-            <Key size={14} />
-            <span>{useJwtAuth ? 'JWT Active' : 'Issue JWT Token'}</span>
-          </button>
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const endpoint = isLogin ? '/v1/auth/login' : '/v1/auth/register';
+      const body = { ...form };
+      if (isLogin) delete body.email;
 
-          {/* Tenant Switcher */}
-          <div className="clay-tenant-switcher">
-            <div className="tenant-label-tag">
-              <span className="pulse-dot-green"></span>
-              <span>Tenant:</span>
-            </div>
+      const res = await apiFetch(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(body)
+      });
 
-            {!isCustomTenantMode ? (
-              <select 
-                className="clay-select"
-                value={activeTenant} 
-                onChange={(e) => setActiveTenant(e.target.value)}
-              >
-                <option value="tenant-alpha">tenant-alpha (Alpha Corp)</option>
-                <option value="tenant-beta">tenant-beta (Beta LLC)</option>
-                {tenants.map(t => (
-                  t.id !== 'tenant-alpha' && t.id !== 'tenant-beta' && (
-                    <option key={t.id} value={t.id}>{t.id} ({t.name})</option>
-                  )
-                ))}
-              </select>
-            ) : (
-              <input 
-                type="text" 
-                className="clay-input-field" 
-                style={{ padding: '4px 10px', fontSize: '0.85rem', width: '130px' }}
-                placeholder="Custom Tenant ID"
-                value={customTenant}
-                onChange={(e) => setCustomTenant(e.target.value)}
-              />
-            )}
+      if (res._demo) {
+        // Mock successful login
+        setToken('demo-token-123');
+        setTenantId(form.tenantId || 't1');
+        addToast('Demo Mode Login Successful', 'success');
+        return;
+      }
 
-            <button 
-              className="clay-btn-secondary" 
-              style={{ padding: '6px 10px', borderRadius: '12px', fontSize: '0.8rem' }}
-              onClick={() => setIsCustomTenantMode(!isCustomTenantMode)}
-            >
-              {isCustomTenantMode ? 'Preset' : 'Custom'}
-            </button>
-          </div>
+      if (res.token) {
+        setToken(res.token);
+        setTenantId(form.tenantId);
+        addToast(`Welcome back, \${form.username}!`, 'success');
+      } else if (!isLogin) {
+        addToast('Registration successful! Please login.', 'success');
+        setIsLogin(true);
+      }
+    } catch (err) {
+      addToast(err.message || 'Authentication failed', 'danger');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-          <button className="clay-theme-toggle" onClick={toggleTheme} title="Toggle Theme">
-            {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-          </button>
-        </div>
-      </header>
+  const demoLogin = () => {
+    setIsDemoMode(true);
+    setToken('demo-token-123');
+    setTenantId('t1');
+    addToast('Demo Mode Activated', 'primary');
+  };
 
-      {/* Main Grid */}
-      <div className="main-grid">
-        <aside className="clay-sidebar">
-          <div className="sidebar-title">Navigation</div>
+  return (
+    <div className="login-container">
+      <div className="hero-bg"></div>
+      <div className="card glass login-card">
+        <h2>{isLogin ? 'Welcome Back' : 'Create Account'}</h2>
+        <p>{isLogin ? 'Sign in to your tenant workspace' : 'Register a new admin user'}</p>
+        
+        <form onSubmit={handleSubmit}>
+          <label>Tenant ID</label>
+          <input required type="text" placeholder="e.g. acme-corp" value={form.tenantId} onChange={e => setForm({...form, tenantId: e.target.value})} />
           
-          <button className={`clay-nav-btn ${activeTab === 'tenants' ? 'active' : ''}`} onClick={() => setActiveTab('tenants')}>
-            <div className="btn-content-left"><Users size={18} /><span>Tenants</span></div>
-            <span className="clay-pill-count">{tenants.length}</span>
-          </button>
-
-          <button className={`clay-nav-btn ${activeTab === 'products' ? 'active' : ''}`} onClick={() => setActiveTab('products')}>
-            <div className="btn-content-left"><Package size={18} /><span>Products</span></div>
-            <span className="clay-pill-count">{products.totalElements || 0}</span>
-          </button>
-
-          <button className={`clay-nav-btn ${activeTab === 'orders' ? 'active' : ''}`} onClick={() => setActiveTab('orders')}>
-            <div className="btn-content-left"><ShoppingCart size={18} /><span>Orders</span></div>
-            <span className="clay-pill-count">{orders.totalElements || 0}</span>
-          </button>
-
-          <button className={`clay-nav-btn ${activeTab === 'isolation-test' ? 'active' : ''}`} onClick={() => setActiveTab('isolation-test')}>
-            <div className="btn-content-left"><ShieldCheck size={18} /><span>RLS Tester</span></div>
-            <span className="clay-badge clay-badge-active" style={{ fontSize: '0.65rem' }}>VERIFY</span>
-          </button>
-
-          <button className={`clay-nav-btn ${activeTab === 'observability' ? 'active' : ''}`} onClick={() => setActiveTab('observability')}>
-            <div className="btn-content-left"><Activity size={18} /><span>Dev & Health</span></div>
-          </button>
-        </aside>
-
-        {/* Content Panel */}
-        <main className="clay-content-panel">
-          {/* TAB 1: TENANTS */}
-          {activeTab === 'tenants' && (
-            <div>
-              <div className="panel-header">
-                <div className="panel-title-group">
-                  <h2>Tenant Organizations</h2>
-                  <p>Global tenant accounts operating outside RLS session scope</p>
-                </div>
-                <button className="clay-btn-primary" onClick={() => setModalType('tenant')}>
-                  <Plus size={16} /><span>Register Tenant</span>
-                </button>
-              </div>
-
-              <div className="clay-grid-3" style={{ marginTop: '24px' }}>
-                {tenants.map(t => (
-                  <div key={t.id} className="clay-item-card">
-                    <div className="card-header-row">
-                      <div className="card-item-title">{t.name}</div>
-                      <span className="clay-badge clay-badge-active">{t.status || 'ACTIVE'}</span>
-                    </div>
-                    <div className="card-item-subtitle"><strong>Tenant ID:</strong> {t.id}</div>
-                    <button 
-                      className="clay-btn-secondary" 
-                      style={{ marginTop: '10px', fontSize: '0.8rem', padding: '8px 12px' }}
-                      onClick={() => {
-                        setActiveTenant(t.id);
-                        setIsCustomTenantMode(false);
-                        setActiveTab('products');
-                        addToast(`Switched active context to ${t.id}`, 'info');
-                      }}
-                    >
-                      Switch Context to This Tenant
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <label>Username</label>
+          <input required type="text" placeholder="admin" value={form.username} onChange={e => setForm({...form, username: e.target.value})} />
+          
+          {!isLogin && (
+            <>
+              <label>Email</label>
+              <input required type="email" placeholder="admin@acme.com" value={form.email} onChange={e => setForm({...form, email: e.target.value})} />
+            </>
           )}
 
-          {/* TAB 2: PRODUCTS */}
-          {activeTab === 'products' && (
-            <div>
-              <div className="panel-header">
-                <div className="panel-title-group">
-                  <h2>Products Catalog</h2>
-                  <p>Filtered by <strong>X-Tenant-ID: {currentTenantId}</strong></p>
-                </div>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <button className="clay-btn-secondary" onClick={() => exportToCSV(products.content, 'products')}>
-                    <Download size={16} /><span>Export CSV</span>
-                  </button>
-                  <button className="clay-btn-primary" onClick={() => setModalType('product')}>
-                    <Plus size={16} /><span>Add Product</span>
-                  </button>
-                </div>
-              </div>
+          <label>Password</label>
+          <input required type="password" placeholder="••••••••" value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
+          
+          <button type="submit" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: '16px' }} disabled={loading}>
+            {loading ? 'Processing...' : isLogin ? 'Sign In' : 'Register'}
+          </button>
+        </form>
 
-              <div className="clay-table-wrapper" style={{ marginTop: '20px' }}>
-                <table className="clay-table">
-                  <thead>
-                    <tr>
-                      <th>Product ID</th>
-                      <th>Name</th>
-                      <th>Description</th>
-                      <th>Price ($)</th>
-                      <th>Stock</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {products.content && products.content.length > 0 ? (
-                      products.content.map(p => (
-                        <tr key={p.id}>
-                          <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{p.id.substring(0, 8)}...</td>
-                          <td><strong>{p.name}</strong></td>
-                          <td>{p.description || '—'}</td>
-                          <td style={{ color: 'var(--accent-primary)', fontWeight: '700' }}>${typeof p.price === 'number' ? p.price.toFixed(2) : p.price}</td>
-                          <td><span className="clay-badge clay-badge-active">{p.stockQuantity} units</span></td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan="5" style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
-                          No products found for tenant <strong>{currentTenantId}</strong>.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+        <div style={{ marginTop: '24px', textAlign: 'center' }}>
+          <button className="btn" onClick={() => setIsLogin(!isLogin)} style={{ border: 'none', background: 'transparent' }}>
+            {isLogin ? 'Need an account? Register' : 'Already have an account? Sign in'}
+          </button>
+        </div>
+        
+        <div style={{ marginTop: '24px', textAlign: 'center', borderTop: '1px solid var(--glass-border)', paddingTop: '16px' }}>
+          <button className="btn" onClick={demoLogin} style={{ width: '100%', justifyContent: 'center' }}>
+            Try Demo Without Backend
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-          {/* TAB 3: ORDERS */}
-          {activeTab === 'orders' && (
-            <div>
-              <div className="panel-header">
-                <div className="panel-title-group">
-                  <h2>Tenant Orders Ledger</h2>
-                  <p>Filtered by <strong>X-Tenant-ID: {currentTenantId}</strong></p>
-                </div>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                  <button className="clay-btn-secondary" onClick={() => exportToCSV(orders.content, 'orders')}>
-                    <Download size={16} /><span>Export CSV</span>
-                  </button>
-                  <button className="clay-btn-primary" onClick={() => setModalType('order')}>
-                    <Plus size={16} /><span>Create Order</span>
-                  </button>
-                </div>
-              </div>
+function DashboardTab({ apiFetch, isDemoMode }) {
+  const [stats, setStats] = useState(null);
 
-              <div className="clay-table-wrapper" style={{ marginTop: '20px' }}>
-                <table className="clay-table">
-                  <thead>
-                    <tr>
-                      <th>Order ID</th>
-                      <th>Customer Email</th>
-                      <th>Amount ($)</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {orders.content && orders.content.length > 0 ? (
-                      orders.content.map(o => (
-                        <tr key={o.id}>
-                          <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{o.id.substring(0, 8)}...</td>
-                          <td><strong>{o.customerEmail}</strong></td>
-                          <td style={{ color: 'var(--accent-primary)', fontWeight: '700' }}>${typeof o.totalAmount === 'number' ? o.totalAmount.toFixed(2) : o.totalAmount}</td>
-                          <td><span className={`clay-badge clay-badge-${o.status.toLowerCase()}`}>{o.status}</span></td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan="4" style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
-                          No orders found for tenant <strong>{currentTenantId}</strong>.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+  useEffect(() => {
+    if (isDemoMode) {
+      setStats({ apiCalls: 15420, orders: 342, products: 12, health: 'Operational' });
+      return;
+    }
+    // In real app, fetch these from various endpoints
+    setStats({ apiCalls: 0, orders: 0, products: 0, health: 'Checking...' });
+  }, [isDemoMode]);
 
-          {/* TAB 4: ISOLATION TEST WORKBENCH */}
-          {activeTab === 'isolation-test' && (
-            <div>
-              <div className="panel-header">
-                <div className="panel-title-group">
-                  <h2>PostgreSQL RLS Data Isolation Workbench</h2>
-                  <p>Visually test multi-tenant data boundary enforcement in real-time</p>
-                </div>
-                <button className="clay-btn-primary" onClick={runIsolationTest} disabled={isTestingIsolation}>
-                  <RefreshCw size={16} className={isTestingIsolation ? 'animate-spin' : ''} />
-                  <span>Run Isolation Test</span>
-                </button>
-              </div>
+  return (
+    <div>
+      <div className="grid-3">
+        <div className="card glass stat-card">
+          <h3>API Calls (30d)</h3>
+          <div className="value">{stats?.apiCalls.toLocaleString() || <Skeleton width="100px" height="40px" />}</div>
+        </div>
+        <div className="card glass stat-card">
+          <h3>Total Orders</h3>
+          <div className="value">{stats?.orders.toLocaleString() || <Skeleton width="100px" height="40px" />}</div>
+        </div>
+        <div className="card glass stat-card">
+          <h3>Active Products</h3>
+          <div className="value">{stats?.products.toLocaleString() || <Skeleton width="100px" height="40px" />}</div>
+        </div>
+      </div>
+      <div className="card glass">
+        <h3 style={{ marginBottom: '16px' }}>System Status</h3>
+        <div className="flex-between">
+          <span>Backend API</span>
+          <span className={`badge \${stats?.health === 'Operational' || isDemoMode ? 'badge-success' : 'badge-danger'}`}>
+            {isDemoMode ? 'Mock Server Online' : stats?.health || 'Operational'}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-              <div className="rls-test-card" style={{ marginTop: '20px' }}>
-                <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
-                  <Lock size={16} style={{ display: 'inline', marginRight: '6px', verticalAlignment: 'text-bottom' }} />
-                  This test sends two simultaneous requests to <code>/api/v1/products</code>: one for <code>tenant-alpha</code> and another for <code>tenant-beta</code>. PostgreSQL Row-Level Security ensures each query returns strictly its tenant's data.
-                </div>
+function TenantsTab({ apiFetch, isDemoMode, addToast }) {
+  const [tenants, setTenants] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [newTenant, setNewTenant] = useState({ id: '', name: '' });
 
-                <div className="rls-comparison-grid" style={{ marginTop: '16px' }}>
-                  <div className="rls-tenant-box">
-                    <strong style={{ color: 'var(--accent-primary)' }}>Tenant Alpha View</strong>
-                    {alphaProducts.map(p => (
-                      <div key={p.id} style={{ padding: '8px', background: 'var(--bg-primary)', borderRadius: '10px', fontSize: '0.85rem' }}>
-                        <strong>{p.name}</strong> (${p.price})
-                      </div>
-                    ))}
-                  </div>
+  useEffect(() => {
+    const fetchTenants = async () => {
+      setLoading(true);
+      const res = await apiFetch('/v1/tenants');
+      setTenants(res._demo ? mockData.tenants : res.content || res || []);
+      setLoading(false);
+    };
+    fetchTenants();
+  }, [apiFetch]);
 
-                  <div className="rls-tenant-box">
-                    <strong style={{ color: 'var(--accent-success)' }}>Tenant Beta View</strong>
-                    {betaProducts.map(p => (
-                      <div key={p.id} style={{ padding: '8px', background: 'var(--bg-primary)', borderRadius: '10px', fontSize: '0.85rem' }}>
-                        <strong>{p.name}</strong> (${p.price})
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    const res = await apiFetch('/v1/tenants', { method: 'POST', body: JSON.stringify(newTenant) });
+    if (res._demo) {
+      setTenants([...tenants, { ...newTenant }]);
+    } else {
+      setTenants([...tenants, res]);
+    }
+    addToast('Tenant created', 'success');
+    setNewTenant({ id: '', name: '' });
+  };
 
-          {/* TAB 5: OBSERVABILITY */}
-          {activeTab === 'observability' && (
-            <div>
-              <div className="panel-header">
-                <div className="panel-title-group">
-                  <h2>System Observability & Health</h2>
-                  <p>Backend telemetry, Spring Actuator, and Swagger documentation</p>
-                </div>
-              </div>
-
-              <div className="clay-grid-3" style={{ marginTop: '20px' }}>
-                <div className="clay-item-card">
-                  <div className="card-header-row">
-                    <span className="card-item-title">Actuator Health</span>
-                    <span className={`clay-badge clay-badge-${health.status === 'UP' ? 'active' : 'pending'}`}>{health.status}</span>
-                  </div>
-                  <div className="card-item-subtitle">Monitors database connectivity and liveness.</div>
-                </div>
-
-                <div className="clay-item-card">
-                  <div className="card-header-row">
-                    <span className="card-item-title">JWT Security</span>
-                    <span className="clay-badge clay-badge-completed">ACTIVE</span>
-                  </div>
-                  <div className="card-item-subtitle">HMAC SHA-256 signed bearer tokens.</div>
-                </div>
-              </div>
-            </div>
-          )}
-        </main>
+  return (
+    <div>
+      <div className="card glass">
+        <h3>Create New Tenant</h3>
+        <form onSubmit={handleCreate} className="flex-gap" style={{ marginTop: '16px' }}>
+          <input required placeholder="Tenant ID (e.g. acme)" value={newTenant.id} onChange={e => setNewTenant({...newTenant, id: e.target.value})} style={{ margin: 0 }} />
+          <input required placeholder="Display Name" value={newTenant.name} onChange={e => setNewTenant({...newTenant, name: e.target.value})} style={{ margin: 0 }} />
+          <button type="submit" className="btn btn-primary">Create</button>
+        </form>
       </div>
 
-      {/* MODALS */}
-      {modalType === 'tenant' && (
-        <div className="clay-modal-overlay">
-          <div className="clay-modal-card">
-            <div className="modal-header">
-              <span className="modal-title">Register Tenant</span>
-              <button className="modal-close-btn" onClick={() => setModalType(null)}><X size={18} /></button>
-            </div>
-            <form onSubmit={handleCreateTenant} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div className="clay-input-group">
-                <label className="clay-input-label">Tenant ID (Slug)</label>
-                <input name="tenantId" className="clay-input-field" placeholder="e.g. tenant-gamma" required />
-              </div>
-              <div className="clay-input-group">
-                <label className="clay-input-label">Organization Name</label>
-                <input name="tenantName" className="clay-input-field" placeholder="e.g. Gamma Labs" required />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '10px' }}>
-                <button type="button" className="clay-btn-secondary" onClick={() => setModalType(null)}>Cancel</button>
-                <button type="submit" className="clay-btn-primary">Register</button>
-              </div>
-            </form>
-          </div>
+      <div className="card glass">
+        <h3>All Tenants</h3>
+        {loading ? <SkeletonLines /> : (
+          <table>
+            <thead><tr><th>ID</th><th>Name</th></tr></thead>
+            <tbody>
+              {tenants.map(t => (
+                <tr key={t.id}><td>{t.id}</td><td>{t.name}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ProductsTab({ apiFetch, isDemoMode, addToast }) {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      const res = await apiFetch('/v1/products?page=0&size=20');
+      setProducts(res._demo ? mockData.products : res.content || []);
+      setLoading(false);
+    };
+    load();
+  }, [apiFetch]);
+
+  return (
+    <div className="card glass">
+      <div className="flex-between">
+        <h3>Products</h3>
+        <button className="btn btn-primary" onClick={() => addToast('Create Product modal would open here')}>+ New Product</button>
+      </div>
+      {loading ? <SkeletonLines /> : (
+        <table>
+          <thead><tr><th>ID</th><th>Name</th><th>Price</th></tr></thead>
+          <tbody>
+            {products.map(p => (
+              <tr key={p.id}><td>{p.id}</td><td>{p.name}</td><td>${p.price}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+function OrdersTab({ apiFetch, isDemoMode, addToast }) {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      const res = await apiFetch('/v1/orders?page=0&size=20');
+      setOrders(res._demo ? mockData.orders : res.content || []);
+      setLoading(false);
+    };
+    load();
+  }, [apiFetch]);
+
+  return (
+    <div className="card glass">
+      <div className="flex-between">
+        <h3>Recent Orders</h3>
+      </div>
+      {loading ? <SkeletonLines /> : (
+        <table>
+          <thead><tr><th>ID</th><th>Email</th><th>Status</th><th>Total</th></tr></thead>
+          <tbody>
+            {orders.map(o => (
+              <tr key={o.id}>
+                <td>#{o.id}</td>
+                <td>{o.email}</td>
+                <td><span className={`badge \${o.status === 'Completed' ? 'badge-success' : 'badge-primary'}`}>{o.status}</span></td>
+                <td>${o.total}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+function UsersTab({ apiFetch, isDemoMode, addToast }) {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      const res = await apiFetch('/v1/users');
+      setUsers(res._demo ? mockData.users : res.content || res || []);
+      setLoading(false);
+    };
+    load();
+  }, [apiFetch]);
+
+  return (
+    <div className="card glass">
+      <h3>Tenant Users</h3>
+      {loading ? <SkeletonLines /> : (
+        <table>
+          <thead><tr><th>Username</th><th>Email</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>
+            {users.map(u => (
+              <tr key={u.id}>
+                <td>{u.username}</td>
+                <td>{u.email}</td>
+                <td><span className={`badge \${u.active ? 'badge-success' : 'badge-danger'}`}>{u.active ? 'Active' : 'Inactive'}</span></td>
+                <td><button className="btn btn-danger" onClick={() => addToast('User deactivated (mock)')}>Deactivate</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+function ApiKeysTab({ apiFetch, isDemoMode, addToast }) {
+  const [keys, setKeys] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [newKey, setNewKey] = useState('');
+  
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      const res = await apiFetch('/v1/api-keys');
+      setKeys(res._demo ? mockData.apiKeys : res.content || res || []);
+      setLoading(false);
+    };
+    load();
+  }, [apiFetch]);
+
+  const handleCreate = async () => {
+    const res = await apiFetch('/v1/api-keys', { method: 'POST', body: JSON.stringify({ name: 'New Key', scopes: 'read' }) });
+    if (res._demo) {
+      const mockKey = { id: Date.now().toString(), name: 'New Key', prefix: 'ak_live_...test', scopes: 'read' };
+      setKeys([...keys, mockKey]);
+      setNewKey('ak_live_demo_secret_key_889210491');
+    } else {
+      setKeys([...keys, res]);
+      setNewKey(res.secret || 'Secret hidden');
+    }
+    addToast('API Key created', 'success');
+  };
+
+  return (
+    <div>
+      <div className="flex-between" style={{ marginBottom: '24px' }}>
+        <h3>API Keys</h3>
+        <button className="btn btn-primary" onClick={handleCreate}>+ Generate Key</button>
+      </div>
+
+      {newKey && (
+        <div className="card glass" style={{ borderColor: 'var(--success)' }}>
+          <h4 style={{ color: 'var(--success)', marginBottom: '8px' }}>New API Key Generated</h4>
+          <p style={{ fontSize: '0.875rem', marginBottom: '16px' }}>Copy this key now. You won't be able to see it again!</p>
+          <code style={{ background: 'var(--bg-primary)', padding: '12px', borderRadius: '4px', display: 'block', wordBreak: 'break-all' }}>{newKey}</code>
         </div>
       )}
 
-      {modalType === 'product' && (
-        <div className="clay-modal-overlay">
-          <div className="clay-modal-card">
-            <div className="modal-header">
-              <span className="modal-title">Add Product to {currentTenantId}</span>
-              <button className="modal-close-btn" onClick={() => setModalType(null)}><X size={18} /></button>
-            </div>
-            <form onSubmit={handleCreateProduct} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div className="clay-input-group">
-                <label className="clay-input-label">Product Name</label>
-                <input name="name" className="clay-input-field" placeholder="e.g. Analytics Engine" required />
-              </div>
-              <div className="clay-input-group">
-                <label className="clay-input-label">Description</label>
-                <input name="description" className="clay-input-field" placeholder="Brief description..." />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="clay-input-group">
-                  <label className="clay-input-label">Price ($)</label>
-                  <input name="price" type="number" step="0.01" min="0.01" className="clay-input-field" placeholder="199.99" required />
-                </div>
-                <div className="clay-input-group">
-                  <label className="clay-input-label">Stock Quantity</label>
-                  <input name="stockQuantity" type="number" min="0" className="clay-input-field" placeholder="50" required />
-                </div>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '10px' }}>
-                <button type="button" className="clay-btn-secondary" onClick={() => setModalType(null)}>Cancel</button>
-                <button type="submit" className="clay-btn-primary">Save Product</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <div className="card glass">
+        {loading ? <SkeletonLines /> : (
+          <table>
+            <thead><tr><th>Name</th><th>Key Prefix</th><th>Scopes</th><th>Actions</th></tr></thead>
+            <tbody>
+              {keys.map(k => (
+                <tr key={k.id}>
+                  <td>{k.name}</td>
+                  <td><code>{k.prefix}</code></td>
+                  <td><span className="badge badge-primary">{k.scopes}</span></td>
+                  <td><button className="btn btn-danger" onClick={() => addToast('Key Revoked (mock)')}>Revoke</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
 
-      {modalType === 'order' && (
-        <div className="clay-modal-overlay">
-          <div className="clay-modal-card">
-            <div className="modal-header">
-              <span className="modal-title">Create Order for {currentTenantId}</span>
-              <button className="modal-close-btn" onClick={() => setModalType(null)}><X size={18} /></button>
-            </div>
-            <form onSubmit={handleCreateOrder} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div className="clay-input-group">
-                <label className="clay-input-label">Customer Email</label>
-                <input name="customerEmail" type="email" className="clay-input-field" placeholder="client@company.com" required />
-              </div>
-              <div className="clay-input-group">
-                <label className="clay-input-label">Total Amount ($)</label>
-                <input name="totalAmount" type="number" step="0.01" min="0.01" className="clay-input-field" placeholder="299.99" required />
-              </div>
-              <div className="clay-input-group">
-                <label className="clay-input-label">Status</label>
-                <select name="status" className="clay-select" defaultValue="COMPLETED">
-                  <option value="COMPLETED">COMPLETED</option>
-                  <option value="PENDING">PENDING</option>
-                  <option value="CANCELLED">CANCELLED</option>
-                </select>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '10px' }}>
-                <button type="button" className="clay-btn-secondary" onClick={() => setModalType(null)}>Cancel</button>
-                <button type="submit" className="clay-btn-primary">Submit Order</button>
-              </div>
-            </form>
-          </div>
-        </div>
+function AuditLogTab({ apiFetch, isDemoMode }) {
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      const res = await apiFetch('/v1/audit-log');
+      setLogs(res._demo ? mockData.auditLog : res.content || res || []);
+      setLoading(false);
+    };
+    load();
+  }, [apiFetch]);
+
+  return (
+    <div className="card glass">
+      <h3>Audit Log</h3>
+      {loading ? <SkeletonLines /> : (
+        <table>
+          <thead><tr><th>Timestamp</th><th>User</th><th>Action</th><th>Resource</th></tr></thead>
+          <tbody>
+            {logs.map(l => (
+              <tr key={l.id}>
+                <td style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{new Date(l.timestamp).toLocaleString()}</td>
+                <td>{l.user}</td>
+                <td><span className="badge badge-primary">{l.action}</span></td>
+                <td>{l.resource}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
+    </div>
+  );
+}
+
+function BillingTab({ apiFetch, isDemoMode }) {
+  const [billing, setBilling] = useState(null);
+  
+  useEffect(() => {
+    const load = async () => {
+      const res = await apiFetch('/v1/billing/usage');
+      setBilling(res._demo ? mockData.billing : res);
+    };
+    load();
+  }, [apiFetch]);
+
+  if (!billing) return <SkeletonLines />;
+
+  return (
+    <div>
+      <div className="card glass" style={{ background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, var(--glass-bg) 100%)' }}>
+        <h2>Current Plan: {billing.plan}</h2>
+        <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>Estimated cost for this cycle: <strong>${billing.currentCycleCost}</strong></p>
+      </div>
+      
+      <div className="grid-3">
+        <div className="card glass stat-card">
+          <h3>API Calls Usage</h3>
+          <div className="value">{billing.apiCalls.toLocaleString()}</div>
+        </div>
+        <div className="card glass stat-card">
+          <h3>Orders Created</h3>
+          <div className="value">{billing.ordersCreated.toLocaleString()}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WebhooksTab({ apiFetch, isDemoMode, addToast }) {
+  const [webhooks, setWebhooks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [newHook, setNewHook] = useState({ url: '', events: 'order.created' });
+  
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      const res = await apiFetch('/v1/webhooks');
+      setWebhooks(res._demo ? mockData.webhooks : res.content || res || []);
+      setLoading(false);
+    };
+    load();
+  }, [apiFetch]);
+
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    const res = await apiFetch('/v1/webhooks', { method: 'POST', body: JSON.stringify(newHook) });
+    setWebhooks([...webhooks, res._demo ? { id: Date.now().toString(), ...newHook } : res]);
+    addToast('Webhook Endpoint added', 'success');
+    setNewHook({ url: '', events: 'order.created' });
+  };
+
+  return (
+    <div>
+      <div className="card glass">
+        <h3>Add Endpoint</h3>
+        <form onSubmit={handleCreate} className="flex-gap" style={{ marginTop: '16px' }}>
+          <input type="url" required placeholder="https://yourapp.com/webhook" value={newHook.url} onChange={e => setNewHook({...newHook, url: e.target.value})} style={{ margin: 0, flex: 2 }} />
+          <input required placeholder="Events (comma separated)" value={newHook.events} onChange={e => setNewHook({...newHook, events: e.target.value})} style={{ margin: 0, flex: 1 }} />
+          <button type="submit" className="btn btn-primary">Add</button>
+        </form>
+      </div>
+
+      <div className="card glass">
+        <h3>Configured Endpoints</h3>
+        {loading ? <SkeletonLines /> : (
+          <table>
+            <thead><tr><th>URL</th><th>Events</th><th>Actions</th></tr></thead>
+            <tbody>
+              {webhooks.map(w => (
+                <tr key={w.id}>
+                  <td>{w.url}</td>
+                  <td><span className="badge badge-success">{w.events}</span></td>
+                  <td><button className="btn btn-danger" onClick={() => addToast('Webhook deleted (mock)')}>Delete</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function RlsTesterTab({ apiFetch, isDemoMode, addToast }) {
+  const [dataA, setDataA] = useState([]);
+  const [dataB, setDataB] = useState([]);
+
+  const testIsolation = async () => {
+    addToast('Fetching data as Tenant A and Tenant B...', 'info');
+    
+    if (isDemoMode) {
+      setDataA([{ id: 1, name: 'Alpha Product 1' }]);
+      setDataB([{ id: 2, name: 'Beta Product 1' }]);
+      addToast('Isolation test complete (Demo)', 'success');
+      return;
+    }
+
+    try {
+      const resA = await apiFetch('/v1/products', { headers: { 'X-Tenant-ID': 'tenant-alpha' } });
+      const resB = await apiFetch('/v1/products', { headers: { 'X-Tenant-ID': 'tenant-beta' } });
+      setDataA(resA.content || resA || []);
+      setDataB(resB.content || resB || []);
+      addToast('Isolation test complete', 'success');
+    } catch(e) {
+      addToast('Test failed: ' + e.message, 'danger');
+    }
+  };
+
+  return (
+    <div>
+      <div className="card glass" style={{ marginBottom: '24px' }}>
+        <h3>Row-Level Security (RLS) Isolation Tester</h3>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>Prove that database queries are strictly isolated by tenant.</p>
+        <button className="btn btn-primary" onClick={testIsolation}>Run Isolation Test</button>
+      </div>
+
+      <div className="grid-3">
+        <div className="card glass">
+          <h4 style={{ color: 'var(--accent)' }}>tenant-alpha context</h4>
+          <pre style={{ marginTop: '16px', background: 'var(--bg-primary)', padding: '12px', borderRadius: '8px', fontSize: '0.875rem', overflowX: 'auto' }}>
+            {JSON.stringify(dataA, null, 2)}
+          </pre>
+        </div>
+        <div className="card glass">
+          <h4 style={{ color: 'var(--success)' }}>tenant-beta context</h4>
+          <pre style={{ marginTop: '16px', background: 'var(--bg-primary)', padding: '12px', borderRadius: '8px', fontSize: '0.875rem', overflowX: 'auto' }}>
+            {JSON.stringify(dataB, null, 2)}
+          </pre>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Helpers
+function Skeleton({ width, height }) {
+  return <div className="skeleton" style={{ width, height }}></div>;
+}
+
+function SkeletonLines() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
+      <Skeleton width="100%" height="40px" />
+      <Skeleton width="100%" height="40px" />
+      <Skeleton width="100%" height="40px" />
     </div>
   );
 }
