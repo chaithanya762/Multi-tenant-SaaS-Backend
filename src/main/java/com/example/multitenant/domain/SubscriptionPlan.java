@@ -39,6 +39,17 @@ public class SubscriptionPlan {
 
     public SubscriptionPlan() {}
 
+    public SubscriptionPlan(String id, String name, int maxProducts, int maxOrdersPerMonth, int maxUsers, int requestsPerMinute, String features, BigDecimal monthlyPriceUsd) {
+        this.id = id;
+        this.name = name;
+        this.maxProducts = maxProducts;
+        this.maxOrdersPerMonth = maxOrdersPerMonth;
+        this.maxUsers = maxUsers;
+        this.requestsPerMinute = requestsPerMinute;
+        this.features = features;
+        this.monthlyPriceUsd = monthlyPriceUsd;
+    }
+
     public List<String> getFeatureList() {
         if (features == null || features.isBlank()) return List.of();
         return Arrays.asList(features.split(","));
@@ -49,12 +60,21 @@ public class SubscriptionPlan {
     }
 
     public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
     public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
     public int getMaxProducts() { return maxProducts; }
+    public void setMaxProducts(int maxProducts) { this.maxProducts = maxProducts; }
     public int getMaxOrdersPerMonth() { return maxOrdersPerMonth; }
+    public void setMaxOrdersPerMonth(int maxOrdersPerMonth) { this.maxOrdersPerMonth = maxOrdersPerMonth; }
     public int getMaxUsers() { return maxUsers; }
+    public void setMaxUsers(int maxUsers) { this.maxUsers = maxUsers; }
     public int getRequestsPerMinute() { return requestsPerMinute; }
+    public void setRequestsPerMinute(int requestsPerMinute) { this.requestsPerMinute = requestsPerMinute; }
     public String getFeatures() { return features; }
+    public void setFeatures(String features) { this.features = features; }
     public BigDecimal getMonthlyPriceUsd() { return monthlyPriceUsd; }
+    public void setMonthlyPriceUsd(BigDecimal monthlyPriceUsd) { this.monthlyPriceUsd = monthlyPriceUsd; }
     public Instant getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
 }

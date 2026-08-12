@@ -45,6 +45,7 @@ public class TenantInterceptor implements HandlerInterceptor {
 
         if (tenantId != null && !tenantId.isBlank()) {
             TenantContext.setTenantId(tenantId.trim());
+            org.slf4j.MDC.put("tenantId", tenantId.trim());
 
             // Check if tenant is suspended or deleted
             tenantRepository.findById(tenantId.trim()).ifPresent(tenant -> {
@@ -72,11 +73,26 @@ public class TenantInterceptor implements HandlerInterceptor {
             try {
                 String token = authHeader.substring(7);
                 String tenantFromJwt = jwtTokenProvider.getTenantIdFromToken(token);
-                if (tenantFromJwt != null && !tenantFromJwt.isBlank()) return tenantFromJwt;
+                if (tenantFromJwt != null && !tenantFromJwt.isBlank()) {
+                    String tenantFromHeader = request.getHeader(TENANT_HEADER);
+                    if (tenantFromHeader != null && !tenantFromHeader.isBlank() && !tenantFromHeader.equals(tenantFromJwt)) {
+                        throw new org.springframework.security.access.AccessDeniedException("Tenant ID in header does not match Tenant ID in JWT");
+                    }
+                    return tenantFromJwt;
+                }
             } catch (Exception e) {
+                if (e instanceof org.springframework.security.access.AccessDeniedException) {
+                    throw e;
+                }
                 log.warn("Invalid JWT token: {}", e.getMessage());
             }
         }
+        
+        String tenantFromHeader = request.getHeader(TENANT_HEADER);
+        if (tenantFromHeader != null && !tenantFromHeader.isBlank()) {
+            return tenantFromHeader;
+        }
+
         String host = request.getHeader("Host");
         if (host != null && host.contains(".")) {
             String[] parts = host.split("\\.");
@@ -86,12 +102,13 @@ public class TenantInterceptor implements HandlerInterceptor {
                 return parts[0];
             }
         }
-        return request.getHeader(TENANT_HEADER);
+        return null;
     }
 
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response,
                                 Object handler, Exception ex) {
         TenantContext.clear();
+        org.slf4j.MDC.remove("tenantId");
     }
 }

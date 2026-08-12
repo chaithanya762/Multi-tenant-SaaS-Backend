@@ -25,7 +25,7 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 
         if (tenantId != null && !tenantId.isBlank()) {
             TenantRateLimiterService.RateLimitResult result = rateLimiterService.tryConsume(tenantId);
-            response.setHeader("X-RateLimit-Limit", "60");
+            response.setHeader("X-RateLimit-Limit", String.valueOf(result.getLimit()));
             response.setHeader("X-RateLimit-Remaining", String.valueOf(result.getRemaining()));
 
             if (!result.isAllowed()) {

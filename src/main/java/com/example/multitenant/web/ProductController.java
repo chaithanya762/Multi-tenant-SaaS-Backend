@@ -3,6 +3,7 @@ package com.example.multitenant.web;
 import com.example.multitenant.domain.Product;
 import com.example.multitenant.service.ProductService;
 import com.example.multitenant.web.dto.CreateProductRequest;
+import com.example.multitenant.web.dto.UpdateProductRequest;
 import com.example.multitenant.web.dto.PagedResponse;
 import com.example.multitenant.web.dto.ProductResponse;
 import jakarta.validation.Valid;
@@ -42,5 +43,17 @@ public class ProductController {
     public ResponseEntity<ProductResponse> getProductById(@PathVariable String id) {
         Product product = productService.getProductById(id);
         return ResponseEntity.ok(ProductResponse.fromEntity(product));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ProductResponse> updateProduct(@PathVariable String id, @Valid @RequestBody UpdateProductRequest request) {
+        Product product = productService.updateProduct(id, request);
+        return ResponseEntity.ok(ProductResponse.fromEntity(product));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteProduct(@PathVariable String id) {
+        productService.deleteProduct(id);
+        return ResponseEntity.noContent().build();
     }
 }

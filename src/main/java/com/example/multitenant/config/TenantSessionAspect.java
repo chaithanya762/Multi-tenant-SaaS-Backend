@@ -49,19 +49,24 @@ public class TenantSessionAspect {
     @Before("serviceOrRepositoryMethods()")
     public void setTenantSessionVariable() {
         if (!checkIsPostgres()) {
-            // Skip SET LOCAL session variable if not running on real PostgreSQL
             return;
         }
 
         String tenantId = TenantContext.getTenantId();
-        if (tenantId != null && !tenantId.isBlank()) {
-            log.trace("Executing PostgreSQL SET LOCAL app.current_tenant_id = '{}'", tenantId);
-            entityManager.createNativeQuery("SET LOCAL app.current_tenant_id = :tenantId")
-                         .setParameter("tenantId", tenantId)
-                         .executeUpdate();
-        } else {
-            entityManager.createNativeQuery("SET LOCAL app.current_tenant_id = ''")
-                         .executeUpdate();
+        String effectiveTenantId = (tenantId != null && !tenantId.isBlank()) ? tenantId.trim() : "";
+
+        try {
+            org.hibernate.Session session = entityManager.unwrap(org.hibernate.Session.class);
+            session.doWork(connection -> {
+                try (java.sql.PreparedStatement stmt = connection.prepareStatement("SET LOCAL app.current_tenant_id = ?")) {
+                    stmt.setString(1, effectiveTenantId);
+                    stmt.execute();
+                } catch (Exception e) {
+                    log.debug("Could not set session variable: {}", e.getMessage());
+                }
+            });
+        } catch (Exception e) {
+            log.debug("Session aspect failed: {}", e.getMessage());
         }
     }
 }

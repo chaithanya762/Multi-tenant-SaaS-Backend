@@ -21,6 +21,7 @@ public class TenantMaintenanceScheduler {
 
     // Run at 2 AM daily: hard-delete soft-deleted products older than 30 days
     @Scheduled(cron = "0 0 2 * * *")
+    @org.springframework.transaction.annotation.Transactional
     public void purgeOldSoftDeletedRecords() {
         Instant cutoff = Instant.now().minus(30, ChronoUnit.DAYS);
         int products = jdbcTemplate.update(
@@ -32,6 +33,7 @@ public class TenantMaintenanceScheduler {
 
     // Run every hour: clean up expired refresh tokens
     @Scheduled(cron = "0 0 * * * *")
+    @org.springframework.transaction.annotation.Transactional
     public void purgeExpiredRefreshTokens() {
         int deleted = jdbcTemplate.update(
             "DELETE FROM refresh_tokens WHERE expires_at < NOW() OR revoked = TRUE");

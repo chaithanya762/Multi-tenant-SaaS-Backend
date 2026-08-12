@@ -36,3 +36,6 @@ management:
   health:
     redis:
       enabled: false
+
+jwt:
+  secret: MultiTenantSaaSSecretKey2026SuperSecureEnterpriseKeyForJWT99xyzABC

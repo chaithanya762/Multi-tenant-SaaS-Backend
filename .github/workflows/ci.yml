@@ -30,12 +30,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Java 21
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: 'maven'
+
+      - name: Make mvnw executable
+        run: chmod +x mvnw
 
       - name: Build & Test
         run: ./mvnw clean verify -B
@@ -43,3 +46,7 @@ jobs:
           SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/multitenant_db
           SPRING_DATASOURCE_USERNAME: postgres
           SPRING_DATASOURCE_PASSWORD: postgres
+          SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+          SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
+          SPRING_FLYWAY_ENABLED: "true"
+          JWT_SECRET: TestSecretKeyThatIsAtLeast64CharactersLongForHMACSHA256SigningAlgorithm!!

@@ -52,5 +52,14 @@ services:
       JWT_EXPIRY_MS: 900000
       JWT_REFRESH_EXPIRY_MS: 2592000000
 
+  frontend:
+    build: ./frontend
+    container_name: multitenant-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - app
+
 volumes:
   postgres_data:

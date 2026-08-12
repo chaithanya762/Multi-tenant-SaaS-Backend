@@ -24,6 +24,7 @@ public class TenantProvisioningEventListener {
 
     @EventListener
     @Async
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void onTenantOnboarded(TenantOnboardedEvent event) {
         log.info("Provisioning default catalog for new tenant: {} ({})", event.getTenantName(), event.getTenantId());
 

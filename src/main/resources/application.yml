@@ -35,19 +35,19 @@ spring:
       timeout: 2000ms
 
   cache:
-    type: redis
+    type: ${SPRING_CACHE_TYPE:simple}
     redis:
       time-to-live: 300000
 
 server:
-  port: 8080
+  port: ${PORT:8080}
   shutdown: graceful
 
 spring.lifecycle.timeout-per-shutdown-phase: 30s
 
 # --- JWT Configuration ---
 jwt:
-  secret: ${JWT_SECRET:MultiTenantSaaSSecretKey2026SuperSecureEnterpriseKeyForJWT99xyzABC}
+  secret: ${JWT_SECRET:MultiTenantSaaSSecretKey2026SuperSecureEnterpriseKeyForJWT99xyzABC_MultiTenantSaaSSecretKey2026}
   expiration-ms: ${JWT_EXPIRY_MS:900000}
   refresh-expiration-ms: ${JWT_REFRESH_EXPIRY_MS:2592000000}
 
@@ -56,7 +56,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus
+        include: health,info,metrics,prometheus,hikaricp
+  health:
+    redis:
+      enabled: ${MANAGEMENT_HEALTH_REDIS_ENABLED:false}
   endpoint:
     health:
       show-details: when-authorized

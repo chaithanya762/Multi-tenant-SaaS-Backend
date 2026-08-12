@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -34,7 +35,10 @@ public class WebhookDeliveryService {
                                    ObjectMapper objectMapper) {
         this.endpointRepository = endpointRepository;
         this.objectMapper = objectMapper;
-        this.restTemplate = new RestTemplate();
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5000);
+        factory.setReadTimeout(10000);
+        this.restTemplate = new RestTemplate(factory);
     }
 
     @Async
@@ -54,11 +58,28 @@ public class WebhookDeliveryService {
                 headers.set("X-Webhook-Tenant", tenantId);
 
                 HttpEntity<String> entity = new HttpEntity<>(body, headers);
-                restTemplate.postForEntity(endpoint.getUrl(), entity, String.class);
-                log.info("Webhook delivered: event='{}' to url='{}' for tenant='{}'",
-                    eventType, endpoint.getUrl(), tenantId);
+                
+                boolean success = false;
+                long[] backoffs = {1000, 5000, 25000};
+                for (int attempt = 1; attempt <= 3; attempt++) {
+                    try {
+                        restTemplate.postForEntity(endpoint.getUrl(), entity, String.class);
+                        log.info("Webhook delivered on attempt {}: event='{}' to url='{}' for tenant='{}'",
+                            attempt, eventType, endpoint.getUrl(), tenantId);
+                        success = true;
+                        break;
+                    } catch (Exception e) {
+                        log.warn("Webhook delivery failed on attempt {} to '{}': {}", attempt, endpoint.getUrl(), e.getMessage());
+                        if (attempt < 3) {
+                            try { Thread.sleep(backoffs[attempt - 1]); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                        }
+                    }
+                }
+                if (!success) {
+                    log.error("Webhook delivery permanently failed after 3 attempts to url='{}' for tenant='{}'", endpoint.getUrl(), tenantId);
+                }
             } catch (Exception e) {
-                log.warn("Webhook delivery failed to '{}': {}", endpoint.getUrl(), e.getMessage());
+                log.warn("Webhook processing failed for '{}': {}", endpoint.getUrl(), e.getMessage());
             }
         }
     }

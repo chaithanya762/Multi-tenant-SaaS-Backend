@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/orders")
@@ -52,5 +53,15 @@ public class OrderController {
                 .map(OrderResponse::fromEntity)
                 .toList();
         return ResponseEntity.ok(orders);
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<OrderResponse> updateOrderStatus(@PathVariable String id, @RequestBody Map<String, String> body) {
+        String status = body.get("status");
+        if (status == null || status.isBlank()) {
+            throw new IllegalArgumentException("status is required");
+        }
+        Order order = orderService.updateOrderStatus(id, status);
+        return ResponseEntity.ok(OrderResponse.fromEntity(order));
     }
 }

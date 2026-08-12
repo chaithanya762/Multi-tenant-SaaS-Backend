@@ -3,6 +3,7 @@ package com.example.multitenant;
 import com.example.multitenant.context.TenantContext;
 import com.example.multitenant.domain.Tenant;
 import com.example.multitenant.repository.TenantRepository;
+import com.example.multitenant.security.JwtTokenProvider;
 import com.example.multitenant.web.dto.CreateOrderRequest;
 import com.example.multitenant.web.dto.CreateProductRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -10,10 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
@@ -26,10 +24,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-class TenantIsolationIntegrationTest {
+class TenantIsolationIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -40,12 +35,25 @@ class TenantIsolationIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
+
+    private String alphaToken;
+    private String betaToken;
+    private String sysAdminToken;
+    private String noTenantToken;
+
     @BeforeEach
     void setUp() {
         tenantRepository.deleteAll();
         tenantRepository.save(new Tenant("tenant-alpha", "Alpha Corp", "ACTIVE"));
         tenantRepository.save(new Tenant("tenant-beta", "Beta LLC", "ACTIVE"));
         TenantContext.clear();
+        
+        alphaToken = jwtTokenProvider.generateToken("alpha-admin", "tenant-alpha", "ROLE_TENANT_ADMIN");
+        betaToken = jwtTokenProvider.generateToken("beta-admin", "tenant-beta", "ROLE_TENANT_ADMIN");
+        sysAdminToken = jwtTokenProvider.generateToken("sysadmin", null, "ROLE_SYS_ADMIN");
+        noTenantToken = jwtTokenProvider.generateToken("user-no-tenant", null, "ROLE_USER");
     }
 
     @Test
@@ -60,7 +68,7 @@ class TenantIsolationIntegrationTest {
         );
 
         mockMvc.perform(post("/api/v1/products")
-                        .header("X-Tenant-ID", "tenant-alpha")
+                        .header("Authorization", "Bearer " + alphaToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(alphaProduct)))
                 .andExpect(status().isCreated())
@@ -69,14 +77,14 @@ class TenantIsolationIntegrationTest {
 
         // 2. Fetch products as Tenant Alpha -> Should return 1 product (paginated response)
         mockMvc.perform(get("/api/v1/products")
-                        .header("X-Tenant-ID", "tenant-alpha"))
+                        .header("Authorization", "Bearer " + alphaToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content", hasSize(1)))
                 .andExpect(jsonPath("$.content[0].name", is("Alpha Server")));
 
         // 3. Fetch products as Tenant Beta -> Should return 0 products!
         mockMvc.perform(get("/api/v1/products")
-                        .header("X-Tenant-ID", "tenant-beta"))
+                        .header("Authorization", "Bearer " + betaToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content", hasSize(0)));
 
@@ -89,7 +97,7 @@ class TenantIsolationIntegrationTest {
         );
 
         mockMvc.perform(post("/api/v1/products")
-                        .header("X-Tenant-ID", "tenant-beta")
+                        .header("Authorization", "Bearer " + betaToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(betaProduct)))
                 .andExpect(status().isCreated())
@@ -98,7 +106,7 @@ class TenantIsolationIntegrationTest {
 
         // 5. Fetch products as Tenant Beta -> Should return only Beta's product
         mockMvc.perform(get("/api/v1/products")
-                        .header("X-Tenant-ID", "tenant-beta"))
+                        .header("Authorization", "Bearer " + betaToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content", hasSize(1)))
                 .andExpect(jsonPath("$.content[0].name", is("Beta Tablet")));
@@ -118,6 +126,7 @@ class TenantIsolationIntegrationTest {
         );
 
         mockMvc.perform(post("/api/v1/products")
+                        .header("Authorization", "Bearer " + noTenantToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(productRequest)))
                 .andExpect(status().isBadRequest())
@@ -136,6 +145,7 @@ class TenantIsolationIntegrationTest {
         );
 
         mockMvc.perform(post("/api/v1/orders")
+                        .header("Authorization", "Bearer " + noTenantToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(orderRequest)))
                 .andExpect(status().isBadRequest())
@@ -153,7 +163,7 @@ class TenantIsolationIntegrationTest {
         );
 
         mockMvc.perform(post("/api/v1/orders")
-                        .header("X-Tenant-ID", "tenant-alpha")
+                        .header("Authorization", "Bearer " + alphaToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(alphaOrder)))
                 .andExpect(status().isCreated())
@@ -162,13 +172,13 @@ class TenantIsolationIntegrationTest {
 
         // Tenant Beta should see 0 orders
         mockMvc.perform(get("/api/v1/orders")
-                        .header("X-Tenant-ID", "tenant-beta"))
+                        .header("Authorization", "Bearer " + betaToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content", hasSize(0)));
 
         // Tenant Alpha should see 1 order
         mockMvc.perform(get("/api/v1/orders")
-                        .header("X-Tenant-ID", "tenant-alpha"))
+                        .header("Authorization", "Bearer " + alphaToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content", hasSize(1)))
                 .andExpect(jsonPath("$.content[0].customerEmail", is("alpha@example.com")));
@@ -178,6 +188,7 @@ class TenantIsolationIntegrationTest {
     @DisplayName("Verify duplicate tenant creation returns 409 Conflict")
     void testDuplicateTenantReturns409() throws Exception {
         mockMvc.perform(post("/api/v1/tenants")
+                        .header("Authorization", "Bearer " + sysAdminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 new com.example.multitenant.web.dto.CreateTenantRequest("tenant-alpha", "Duplicate Alpha"))))
@@ -193,7 +204,7 @@ class TenantIsolationIntegrationTest {
         String invalidProduct = "{\"name\":\"\",\"price\":null,\"stockQuantity\":-1}";
 
         mockMvc.perform(post("/api/v1/products")
-                        .header("X-Tenant-ID", "tenant-alpha")
+                        .header("Authorization", "Bearer " + alphaToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(invalidProduct))
                 .andExpect(status().isUnprocessableEntity())
