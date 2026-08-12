@@ -5,16 +5,16 @@ const globalCss = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
   :root {
-    --bg-primary: #0f111a;
-    --bg-secondary: #1a1d27;
-    --text-primary: #f8f9fa;
-    --text-secondary: #a0aab2;
-    --accent: #8b5cf6;
-    --accent-hover: #7c3aed;
+    --bg-primary: #060a12;
+    --bg-secondary: #0c1220;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --accent: #1d4ed8;
+    --accent-hover: #2563eb;
     --danger: #ef4444;
     --success: #10b981;
-    --glass-bg: rgba(26, 29, 39, 0.6);
-    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-bg: rgba(15, 23, 42, 0.65);
+    --glass-border: rgba(255, 255, 255, 0.1);
     --sidebar-width: 260px;
   }
 
@@ -89,12 +89,12 @@ const globalCss = `
   }
 
   .nav-item:hover {
-    background: rgba(139, 92, 246, 0.1);
+    background: rgba(29, 78, 216, 0.12);
     color: var(--accent);
   }
 
   .nav-item.active {
-    background: linear-gradient(90deg, rgba(139, 92, 246, 0.15) 0%, transparent 100%);
+    background: linear-gradient(90deg, rgba(29, 78, 216, 0.2) 0%, transparent 100%);
     color: var(--accent);
     border-left: 3px solid var(--accent);
   }
