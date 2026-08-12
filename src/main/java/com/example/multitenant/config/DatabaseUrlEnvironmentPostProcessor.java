@@ -13,7 +13,7 @@ import java.util.Map;
 
 public class DatabaseUrlEnvironmentPostProcessor implements EnvironmentPostProcessor {
 
-    private static final Logger log = LoggerFactory.getLogger(DatabaseUrlEnvironmentPostProcessor.java);
+    private static final Logger log = LoggerFactory.getLogger(DatabaseUrlEnvironmentPostProcessor.class);
 
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
