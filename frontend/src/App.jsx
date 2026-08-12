@@ -343,7 +343,7 @@ export default function App() {
   const [token, setToken] = useState(localStorage.getItem('saas_token') || '');
   const [tenantId, setTenantId] = useState(localStorage.getItem('saas_tenant') || '');
   const [isDemoMode, setIsDemoMode] = useState(false);
-  const [theme, setTheme] = useState('dark');
+  const [theme, setTheme] = useState('light');
   const [toasts, setToasts] = useState([]);
   
   // Navigation State
@@ -361,6 +361,7 @@ export default function App() {
 
   useEffect(() => {
     document.body.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
   const addToast = useCallback((message, type = 'info') => {
