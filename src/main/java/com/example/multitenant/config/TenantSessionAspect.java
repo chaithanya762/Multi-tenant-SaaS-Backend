@@ -58,9 +58,11 @@ public class TenantSessionAspect {
         try {
             org.hibernate.Session session = entityManager.unwrap(org.hibernate.Session.class);
             session.doWork(connection -> {
-                try (java.sql.PreparedStatement stmt = connection.prepareStatement("SET LOCAL app.current_tenant_id = ?")) {
+                try (java.sql.PreparedStatement stmt = connection.prepareStatement("SELECT set_config('app.current_tenant_id', ?, true)")) {
                     stmt.setString(1, effectiveTenantId);
-                    stmt.execute();
+                    try (java.sql.ResultSet rs = stmt.executeQuery()) {
+                        // Successfully set PostgreSQL session variable for RLS
+                    }
                 } catch (Exception e) {
                     log.debug("Could not set session variable: {}", e.getMessage());
                 }

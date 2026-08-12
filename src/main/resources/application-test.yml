@@ -13,7 +13,7 @@ spring:
         format_sql: true
         dialect: ${SPRING_JPA_DATABASE_PLATFORM:org.hibernate.dialect.H2Dialect}
   flyway:
-    enabled: false
+    enabled: ${SPRING_FLYWAY_ENABLED:false}
   cache:
     type: simple
 
