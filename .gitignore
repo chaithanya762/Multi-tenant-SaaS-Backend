@@ -1,0 +1,25 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+node_modules/
+dist/
+frontend/node_modules/
+frontend/dist/
+
+### IDE / Editor files ###
+.idea
+*.iws
+*.iml
+*.ipr
+.vscode/
+.classpath
+.project
+.settings/
+bin/
+
+### Logs & Temp ###
+*.log
+tmp/
+.DS_Store
+

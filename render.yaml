@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: multitenant-backend
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        fromDatabase:
+          name: multitenant-db
+          property: connectionString
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: multitenant-db
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: multitenant-db
+          property: password
+      - key: SPRING_CACHE_TYPE
+        value: simple
+      - key: MANAGEMENT_HEALTH_REDIS_ENABLED
+        value: "false"
+      - key: JWT_SECRET
+        value: MultiTenantSaaSSecretKey2026SuperSecureEnterpriseKeyForJWT99xyzABC_MultiTenantSaaSSecretKey2026
+
+  - type: web
+    name: multitenant-frontend
+    env: static
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: ./frontend/dist
+
+databases:
+  - name: multitenant-db
+    databaseName: multitenant_db
+    user: multitenant_admin
+    plan: free
