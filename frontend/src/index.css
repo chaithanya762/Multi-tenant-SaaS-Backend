@@ -5,45 +5,50 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  /* Dark Theme (default - Linear/Vercel crisp neutral slate) */
-  --bg-base:        #09090b;
-  --bg-surface:     #121215;
-  --bg-card:        #18181b;
-  --bg-card-hover:  #202024;
-  --bg-input:       #18181b;
-  --bg-sidebar:     #0d0d10;
+  /* Dark Theme (Cybernetic Obsidian & Electric Cyan/Emerald) */
+  --bg-base:        #070a12;
+  --bg-surface:     #0f1524;
+  --bg-card:        #131b2e;
+  --bg-card-hover:  #18233c;
+  --bg-input:       #111827;
+  --bg-sidebar:     #090e1a;
 
-  --border-subtle:  rgba(255, 255, 255, 0.07);
-  --border-card:    rgba(255, 255, 255, 0.09);
-  --border-focus:   rgba(99, 102, 241, 0.6);
+  --border-subtle:  rgba(255, 255, 255, 0.08);
+  --border-card:    rgba(6, 182, 212, 0.15);
+  --border-focus:   rgba(6, 182, 212, 0.6);
 
-  --text-primary:   #f4f4f5;
-  --text-secondary: #a1a1aa;
-  --text-muted:     #71717a;
+  --text-primary:   #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted:     #64748b;
   --text-bright:    #ffffff;
 
-  --accent:         #6366f1;
-  --accent-hover:   #4f46e5;
-  --accent-glow:    rgba(99, 102, 241, 0.2);
-  --accent-soft:    rgba(99, 102, 241, 0.12);
+  --accent:         #06b6d4;
+  --accent-hover:   #0891b2;
+  --accent-glow:    rgba(6, 182, 212, 0.25);
+  --accent-soft:    rgba(6, 182, 212, 0.12);
+  --accent-gradient: linear-gradient(135deg, #06b6d4 0%, #10b981 100%);
 
+  --emerald:        #10b981;
+  --emerald-soft:   rgba(16, 185, 129, 0.14);
+  --amber:          #f59e0b;
+  --amber-soft:     rgba(245, 158, 11, 0.14);
   --green:          #10b981;
   --green-soft:     rgba(16, 185, 129, 0.12);
   --yellow:         #f59e0b;
   --yellow-soft:    rgba(245, 158, 11, 0.12);
-  --red:            #ef4444;
-  --red-soft:       rgba(239, 68, 68, 0.12);
-  --blue:           #3b82f6;
-  --blue-soft:      rgba(59, 130, 246, 0.12);
-  --purple:         #8b5cf6;
-  --purple-soft:    rgba(139, 92, 246, 0.12);
+  --red:            #f43f5e;
+  --red-soft:       rgba(244, 63, 94, 0.14);
+  --blue:           #0284c7;
+  --blue-soft:      rgba(2, 132, 199, 0.14);
+  --purple:         #06b6d4;
+  --purple-soft:    rgba(6, 182, 212, 0.12);
   --cyan:           #06b6d4;
   --cyan-soft:      rgba(6, 182, 212, 0.12);
 
-  --shadow-sm:      0 1px 2px rgba(0,0,0,0.4);
-  --shadow-md:      0 4px 12px rgba(0,0,0,0.35);
-  --shadow-lg:      0 8px 24px rgba(0,0,0,0.45);
-  --shadow-glow:    0 0 20px rgba(99, 102, 241, 0.2);
+  --shadow-sm:      0 1px 3px rgba(0,0,0,0.5);
+  --shadow-md:      0 4px 14px rgba(0,0,0,0.45);
+  --shadow-lg:      0 10px 30px rgba(0,0,0,0.6);
+  --shadow-glow:    0 0 25px rgba(6, 182, 212, 0.25);
 
   --radius-xs:  4px;
   --radius-sm:  6px;
