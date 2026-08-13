@@ -131,7 +131,7 @@ export function Dashboard() {
         <button className="btn btn-secondary flex items-center gap-2" onClick={() => navigate('/api-keys')}>
           <Key size={16} /> API Keys
         </button>
-        <button className="btn btn-primary flex items-center gap-2" onClick={() => navigate('/rls-test')}>
+        <button className="btn btn-primary flex items-center gap-2" onClick={() => navigate('/rls-tester')}>
           <Terminal size={16} /> Launch RLS Console
         </button>
       </div>
