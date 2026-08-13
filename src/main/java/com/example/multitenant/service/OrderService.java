@@ -26,11 +26,13 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final TenantRepository tenantRepository;
     private final SubscriptionPlanRepository planRepository;
+    private final RealtimeEventPublisherService realtimeEventPublisherService;
 
-    public OrderService(OrderRepository orderRepository, TenantRepository tenantRepository, SubscriptionPlanRepository planRepository) {
+    public OrderService(OrderRepository orderRepository, TenantRepository tenantRepository, SubscriptionPlanRepository planRepository, RealtimeEventPublisherService realtimeEventPublisherService) {
         this.orderRepository = orderRepository;
         this.tenantRepository = tenantRepository;
         this.planRepository = planRepository;
+        this.realtimeEventPublisherService = realtimeEventPublisherService;
     }
 
     @Transactional
@@ -65,7 +67,12 @@ public class OrderService {
 
         Order order = new Order(id, request.getCustomerEmail(), request.getTotalAmount(), status);
         order.setTenantId(tenantId);
-        return orderRepository.save(order);
+        Order saved = orderRepository.save(order);
+
+        // Broadcast real-time SSE event
+        realtimeEventPublisherService.publishEvent(tenantId, "order.created", saved);
+
+        return saved;
     }
 
     @Transactional(readOnly = true)
