@@ -24,7 +24,8 @@ export const createApiClient = (token, tenantId, isDemoMode, setIsDemoMode, addT
         ...(options.headers || {})
       };
 
-      const response = await fetch(`/api${endpoint}`, { ...options, headers });
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const response = await fetch(`${baseUrl}/api${endpoint}`, { ...options, headers });
       
       if (response.status === 401) {
         if (handleLogout) handleLogout();
