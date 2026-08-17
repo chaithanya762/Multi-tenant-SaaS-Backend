@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { getApiBaseUrl } from '../api/apiClient';
 
@@ -8,13 +8,18 @@ export function AuthScreen() {
   const { login, apiFetch, addToast } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [form, setForm] = useState({ tenantId: 'tenant-alpha', username: 'alpha-admin', email: '', password: 'password123' });
-  const [apiUrl, setApiUrl] = useState(localStorage.getItem('saas_api_url') || DEFAULT_RENDER_URL);
+  const [apiUrl, setApiUrl] = useState(() => getApiBaseUrl());
   const [showConfig, setShowConfig] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  if (!localStorage.getItem('saas_api_url')) {
-    localStorage.setItem('saas_api_url', DEFAULT_RENDER_URL);
-  }
+  useEffect(() => {
+    // If local storage has Vercel URL, clean it up automatically
+    const current = localStorage.getItem('saas_api_url');
+    if (!current || current.includes('vercel.app')) {
+      localStorage.setItem('saas_api_url', DEFAULT_RENDER_URL);
+      setApiUrl(DEFAULT_RENDER_URL);
+    }
+  }, []);
 
   const handleApiUrlChange = (val) => {
     setApiUrl(val);
@@ -120,7 +125,7 @@ export function AuthScreen() {
                 onClick={() => setShowConfig(!showConfig)} 
                 style={{ fontSize: '0.76rem', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', justifyContent: 'space-between' }}
               >
-                <span>Backend Target: <code className="code-tag">{apiUrl || getApiBaseUrl() || '/api'}</code></span>
+                <span>Backend Target: <code className="code-tag">{apiUrl || DEFAULT_RENDER_URL}</code></span>
                 <span>{showConfig ? '▲ Hide' : '▼ Change'}</span>
               </div>
 

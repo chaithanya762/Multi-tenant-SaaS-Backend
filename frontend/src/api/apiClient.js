@@ -1,9 +1,19 @@
+const DEFAULT_RENDER_URL = 'https://multitenant-backend-4lh0.onrender.com';
+
 export const getApiBaseUrl = () => {
-  const customUrl = localStorage.getItem('saas_api_url');
+  let customUrl = localStorage.getItem('saas_api_url');
+  // Vercel hosts the frontend static files, not Java Spring Boot backend.
+  // Overwrite if previously pointing to vercel.app
+  if (customUrl && customUrl.includes('vercel.app')) {
+    customUrl = DEFAULT_RENDER_URL;
+    localStorage.setItem('saas_api_url', DEFAULT_RENDER_URL);
+  }
   if (customUrl) return customUrl.replace(/\/+$/, '');
+  
   const envUrl = import.meta.env.VITE_API_BASE_URL;
-  if (envUrl) return envUrl.replace(/\/+$/, '');
-  return '';
+  if (envUrl && !envUrl.includes('vercel.app')) return envUrl.replace(/\/+$/, '');
+
+  return DEFAULT_RENDER_URL;
 };
 
 export const createApiClient = (token, tenantId, addToast, handleLogout) => {
@@ -17,7 +27,7 @@ export const createApiClient = (token, tenantId, addToast, handleLogout) => {
       };
 
       const baseUrl = getApiBaseUrl();
-      const url = baseUrl ? `${baseUrl}/api${endpoint}` : `/api${endpoint}`;
+      const url = `${baseUrl}/api${endpoint}`;
 
       const response = await fetch(url, { ...options, headers });
       
@@ -45,8 +55,8 @@ export const createApiClient = (token, tenantId, addToast, handleLogout) => {
       
     } catch (error) {
       if (error.message === 'Failed to fetch' || error.message.includes('NetworkError')) {
-        const targetUrl = getApiBaseUrl() || 'http://localhost:8080';
-        const networkError = `Backend API server at [${targetUrl}] is unreachable (502 / Connection Refused). Please ensure your backend is running or specify your Render API URL.`;
+        const targetUrl = getApiBaseUrl();
+        const networkError = `Backend API server at [${targetUrl}] is unreachable. Ensure Render backend is awake or update target URL.`;
         if (addToast) addToast(networkError, 'error');
         throw new Error(networkError);
       }
