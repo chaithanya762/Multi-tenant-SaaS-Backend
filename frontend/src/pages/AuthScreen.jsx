@@ -2,13 +2,20 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { getApiBaseUrl } from '../api/apiClient';
 
+const DEFAULT_RENDER_URL = 'https://multitenant-backend-4lh0.onrender.com';
+
 export function AuthScreen() {
   const { login, apiFetch, addToast } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [form, setForm] = useState({ tenantId: 'tenant-alpha', username: 'alpha-admin', email: '', password: 'password123' });
-  const [apiUrl, setApiUrl] = useState(localStorage.getItem('saas_api_url') || '');
+  const [apiUrl, setApiUrl] = useState(localStorage.getItem('saas_api_url') || DEFAULT_RENDER_URL);
   const [showConfig, setShowConfig] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Initialize default Render URL in localStorage if not set
+  if (!localStorage.getItem('saas_api_url')) {
+    localStorage.setItem('saas_api_url', DEFAULT_RENDER_URL);
+  }
 
   const handleApiUrlChange = (val) => {
     setApiUrl(val);
@@ -113,7 +120,7 @@ export function AuthScreen() {
                 onClick={() => setShowConfig(!showConfig)} 
                 style={{ fontSize: '0.76rem', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', justifyContent: 'space-between' }}
               >
-                <span>Backend Target: <code className="code-tag">{apiUrl || getApiBaseUrl() || '/api (Vite Proxy)'}</code></span>
+                <span>Backend Target: <code className="code-tag">{apiUrl || getApiBaseUrl() || '/api'}</code></span>
                 <span>{showConfig ? '▲ Hide' : '▼ Change'}</span>
               </div>
 
@@ -123,11 +130,11 @@ export function AuthScreen() {
                   <input 
                     type="url" 
                     className="input" 
-                    placeholder="https://your-app.onrender.com" 
+                    placeholder="https://multitenant-backend-4lh0.onrender.com" 
                     value={apiUrl} 
                     onChange={e => handleApiUrlChange(e.target.value)} 
                   />
-                  <div className="subtext">Enter your deployed Render backend URL or leave empty for local proxy.</div>
+                  <div className="subtext">Targeting live Render backend instance.</div>
                 </div>
               )}
             </div>
