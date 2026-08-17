@@ -1,3 +1,11 @@
+export const getApiBaseUrl = () => {
+  const customUrl = localStorage.getItem('saas_api_url');
+  if (customUrl) return customUrl.replace(/\/+$/, '');
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  if (envUrl) return envUrl.replace(/\/+$/, '');
+  return '';
+};
+
 export const createApiClient = (token, tenantId, addToast, handleLogout) => {
   return async (endpoint, options = {}) => {
     try {
@@ -8,8 +16,10 @@ export const createApiClient = (token, tenantId, addToast, handleLogout) => {
         ...(options.headers || {})
       };
 
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
-      const response = await fetch(`${baseUrl}/api${endpoint}`, { ...options, headers });
+      const baseUrl = getApiBaseUrl();
+      const url = baseUrl ? `${baseUrl}/api${endpoint}` : `/api${endpoint}`;
+
+      const response = await fetch(url, { ...options, headers });
       
       if (response.status === 401) {
         if (handleLogout) handleLogout();
@@ -35,7 +45,8 @@ export const createApiClient = (token, tenantId, addToast, handleLogout) => {
       
     } catch (error) {
       if (error.message === 'Failed to fetch' || error.message.includes('NetworkError')) {
-        const networkError = 'Backend API is unreachable. Check your network or backend server deployment.';
+        const targetUrl = getApiBaseUrl() || 'http://localhost:8080';
+        const networkError = `Backend API server at [${targetUrl}] is unreachable (502 / Connection Refused). Please ensure your backend is running or specify your Render API URL.`;
         if (addToast) addToast(networkError, 'error');
         throw new Error(networkError);
       }

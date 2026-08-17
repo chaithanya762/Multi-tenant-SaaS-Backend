@@ -1,11 +1,23 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { getApiBaseUrl } from '../api/apiClient';
 
 export function AuthScreen() {
   const { login, apiFetch, addToast } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [form, setForm] = useState({ tenantId: 'tenant-alpha', username: 'alpha-admin', email: '', password: 'password123' });
+  const [apiUrl, setApiUrl] = useState(localStorage.getItem('saas_api_url') || '');
+  const [showConfig, setShowConfig] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const handleApiUrlChange = (val) => {
+    setApiUrl(val);
+    if (val) {
+      localStorage.setItem('saas_api_url', val);
+    } else {
+      localStorage.removeItem('saas_api_url');
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -93,6 +105,31 @@ export function AuthScreen() {
                 value={form.password} 
                 onChange={e => setForm({...form, password: e.target.value})} 
               />
+            </div>
+
+            {/* API Endpoint Selector */}
+            <div style={{ marginTop: '4px' }}>
+              <div 
+                onClick={() => setShowConfig(!showConfig)} 
+                style={{ fontSize: '0.76rem', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', justifyContent: 'space-between' }}
+              >
+                <span>Backend Target: <code className="code-tag">{apiUrl || getApiBaseUrl() || '/api (Vite Proxy)'}</code></span>
+                <span>{showConfig ? '▲ Hide' : '▼ Change'}</span>
+              </div>
+
+              {showConfig && (
+                <div className="form-group mt-2">
+                  <label>Backend API Base URL</label>
+                  <input 
+                    type="url" 
+                    className="input" 
+                    placeholder="https://your-app.onrender.com" 
+                    value={apiUrl} 
+                    onChange={e => handleApiUrlChange(e.target.value)} 
+                  />
+                  <div className="subtext">Enter your deployed Render backend URL or leave empty for local proxy.</div>
+                </div>
+              )}
             </div>
 
             <button type="submit" className="btn btn-primary mt-4" style={{ width: '100%', justifyContent: 'center' }} disabled={loading}>
