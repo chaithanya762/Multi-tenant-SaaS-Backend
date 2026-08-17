@@ -12,7 +12,6 @@ export function AuthScreen() {
   const [showConfig, setShowConfig] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Initialize default Render URL in localStorage if not set
   if (!localStorage.getItem('saas_api_url')) {
     localStorage.setItem('saas_api_url', DEFAULT_RENDER_URL);
   }
@@ -39,8 +38,9 @@ export function AuthScreen() {
         body: JSON.stringify(body)
       });
 
-      if (res.token) {
-        login(res.token, form.tenantId);
+      const token = res.accessToken || res.token;
+      if (token) {
+        login(token, form.tenantId);
         addToast(`Welcome, ${form.username}`, 'success');
       } else if (!isLogin) {
         addToast('Registration successful. Please sign in.', 'success');

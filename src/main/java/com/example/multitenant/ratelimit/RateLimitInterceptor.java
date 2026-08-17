@@ -31,14 +31,7 @@ public class RateLimitInterceptor implements HandlerInterceptor {
             if (!result.isAllowed()) {
                 response.setStatus(429);
                 response.setContentType("application/json");
-                response.getWriter().write("""
-                    {
-                      "status": 429,
-                      "error": "Too Many Requests",
-                      "message": "Tenant API quota exceeded. Please try again in a minute.",
-                      "tenantId": "%s"
-                    }
-                    """.formatted(tenantId));
+                response.getWriter().write("{\"status\":429,\"error\":\"Too Many Requests\",\"message\":\"Tenant API quota exceeded.\",\"tenantId\":\"" + tenantId + "\"}");
                 return false;
             }
 
