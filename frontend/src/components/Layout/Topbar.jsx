@@ -2,7 +2,6 @@ import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { Menu, Moon, Sun, Search, ShieldCheck } from 'lucide-react';
 
 export function Topbar({ toggleSidebar }) {
   const { tenantId, isDemoMode } = useAuth();
@@ -26,38 +25,24 @@ export function Topbar({ toggleSidebar }) {
   };
 
   return (
-    <header className="top-bar">
-      <div className="top-bar-left">
-        <button className="mobile-menu-btn btn btn-icon" onClick={toggleSidebar}>
-          <Menu size={18} />
-        </button>
-        <div className="breadcrumb-area">
-          <span className="breadcrumb-root">Console</span>
-          <span className="breadcrumb-sep">/</span>
-          <h2 className="page-title">{getPageTitle()}</h2>
-        </div>
+    <header className="topbar">
+      <div className="flex items-center gap-3">
+        <span className="text-secondary font-semibold" style={{ fontSize: '0.84rem' }}>Console</span>
+        <span className="text-muted">/</span>
+        <span className="text-bright font-bold" style={{ fontSize: '0.92rem' }}>{getPageTitle()}</span>
       </div>
 
-      <div className="top-bar-center">
-        <div className="search-box">
-          <Search size={14} className="search-icon" />
-          <input type="text" placeholder="Search resources, API keys, orders..." className="search-input" />
-          <kbd className="search-kbd">⌘K</kbd>
-        </div>
-      </div>
-
-      <div className="top-bar-right">
+      <div className="flex items-center gap-3">
         {isDemoMode ? (
-          <span className="status-pill demo"><div className="status-dot"></div>DEMO MODE</span>
+          <span className="badge badge-amber">Demo Mode</span>
         ) : (
-          <span className="status-pill online"><div className="status-dot"></div>LIVE</span>
+          <span className="badge badge-green">Live Production</span>
         )}
-        <div className="tenant-badge">
-          <ShieldCheck size={14} color="var(--accent)" />
-          <span>{tenantId || 'global'}</span>
-        </div>
-        <button className="btn btn-icon theme-toggle-btn" onClick={toggleTheme} title="Toggle Theme">
-          {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+        <span className="badge badge-blue font-mono">
+          Tenant: {tenantId || 'global'}
+        </span>
+        <button className="btn btn-secondary" onClick={toggleTheme} style={{ padding: '4px 10px', fontSize: '0.78rem' }}>
+          {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
         </button>
       </div>
     </header>

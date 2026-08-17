@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { DataTable } from '../components/ui/DataTable';
 import { Pagination } from '../components/ui/Pagination';
-import { ShoppingBag, Search, DollarSign, CheckCircle2, Clock } from 'lucide-react';
 
 export function Orders() {
   const { apiFetch, isDemoMode } = useAuth();
@@ -39,89 +38,72 @@ export function Orders() {
   }, [apiFetch, page, emailFilter]);
 
   const columns = [
-    { key: 'id', label: 'Order Reference', render: (row) => <code className="code-tag" style={{ color: 'var(--cyan)' }}>#{row.id}</code> },
-    { key: 'email', label: 'Customer Email', render: (row) => <span className="text-bright font-medium">{row.email}</span> },
-    { key: 'status', label: 'Order Status', render: (row) => (
-      <span className={`badge ${row.status === 'Completed' || row.status === 'SHIPPED' || row.status === 'DELIVERED' ? 'badge-green' : row.status === 'PROCESSING' ? 'badge-cyan' : 'badge-yellow'}`}>
-        ● {row.status}
+    { key: 'id', label: 'Order Reference', render: (row) => <code className="code-tag">#{row.id}</code> },
+    { key: 'email', label: 'Customer Email', render: (row) => <span style={{ color: 'var(--text-bright)', fontWeight: 500 }}>{row.email}</span> },
+    { key: 'status', label: 'Status', render: (row) => (
+      <span className={`badge ${row.status === 'Completed' || row.status === 'SHIPPED' || row.status === 'DELIVERED' ? 'badge-green' : row.status === 'PROCESSING' ? 'badge-blue' : 'badge-amber'}`}>
+        {row.status}
       </span>
     )},
-    { key: 'total', label: 'Total Amount', render: (row) => <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--emerald)' }}>${Number(row.total || 0).toFixed(2)}</span> }
+    { key: 'total', label: 'Total Amount', render: (row) => <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>${Number(row.total || 0).toFixed(2)}</span> }
   ];
 
   return (
     <div className="orders-page">
-      <div className="page-header mb-6">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="badge badge-emerald flex items-center gap-1">
-              <ShoppingBag size={12} /> Transactions & Fulfillment
-            </span>
-          </div>
-          <h1>Order Management</h1>
-          <p>Track, filter, and transition order fulfillment states in real-time.</p>
-        </div>
+      <div className="page-header mb-4">
+        <h1>Order Management</h1>
+        <p>Track, filter, and transition tenant order fulfillment states.</p>
       </div>
 
-      {/* Stats Summary Bar */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="glass-card card-p flex items-center gap-3">
-          <div className="stat-icon" style={{ background: 'var(--emerald-soft)', color: 'var(--emerald)' }}>
-            <DollarSign size={18} />
-          </div>
-          <div>
-            <div className="text-xs text-secondary">Total Gross Volume</div>
-            <div className="text-xl font-bold text-bright">
-              ${orders.reduce((acc, o) => acc + Number(o.total || 0), 0).toFixed(2)}
-            </div>
+      <div className="stats-grid mb-4">
+        <div className="stat-card">
+          <div className="stat-label">Gross Order Volume</div>
+          <div className="stat-value">
+            ${orders.reduce((acc, o) => acc + Number(o.total || 0), 0).toFixed(2)}
           </div>
         </div>
 
-        <div className="glass-card card-p flex items-center gap-3">
-          <div className="stat-icon" style={{ background: 'var(--cyan-soft)', color: 'var(--cyan)' }}>
-            <CheckCircle2 size={18} />
-          </div>
-          <div>
-            <div className="text-xs text-secondary">Completed Orders</div>
-            <div className="text-xl font-bold text-bright">
-              {orders.filter(o => o.status === 'Completed' || o.status === 'DELIVERED').length}
-            </div>
+        <div className="stat-card">
+          <div className="stat-label">Completed Orders</div>
+          <div className="stat-value">
+            {orders.filter(o => o.status === 'Completed' || o.status === 'DELIVERED').length}
           </div>
         </div>
 
-        <div className="glass-card card-p flex items-center gap-3">
-          <div className="stat-icon" style={{ background: 'var(--amber-soft)', color: 'var(--amber)' }}>
-            <Clock size={18} />
-          </div>
-          <div>
-            <div className="text-xs text-secondary">Pending Processing</div>
-            <div className="text-xl font-bold text-bright">
-              {orders.filter(o => o.status !== 'Completed' && o.status !== 'DELIVERED').length}
-            </div>
+        <div className="stat-card">
+          <div className="stat-label">Pending Processing</div>
+          <div className="stat-value">
+            {orders.filter(o => o.status !== 'Completed' && o.status !== 'DELIVERED').length}
           </div>
         </div>
       </div>
 
-      <div className="glass-card card-p">
-        <div className="flex items-center justify-between gap-4 mb-4">
-          <div className="relative flex-1 max-w-sm">
-            <Search size={16} style={{ position: 'absolute', left: '12px', top: '10px', color: 'var(--text-muted)' }} />
-            <input 
-              className="input" 
-              placeholder="Filter by customer email..." 
-              value={emailFilter} 
-              onChange={e => {
-                setEmailFilter(e.target.value);
-                setPage(0);
-              }} 
-              style={{ paddingLeft: '36px' }}
-            />
-          </div>
+      <div className="card card-p">
+        <div className="mb-4">
+          <input 
+            className="input" 
+            placeholder="Filter by customer email..." 
+            value={emailFilter} 
+            onChange={e => {
+              setEmailFilter(e.target.value);
+              setPage(0);
+            }} 
+            style={{ maxWidth: '360px' }}
+          />
         </div>
 
         <DataTable columns={columns} data={orders} loading={loading} />
         <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
       </div>
+
+      <footer className="app-footer">
+        <div>NexusSaaS Enterprise v1.0.0</div>
+        <div className="flex gap-4">
+          <a href="#" onClick={e => e.preventDefault()}>Terms of Service</a>
+          <a href="#" onClick={e => e.preventDefault()}>Privacy Policy</a>
+          <a href="#" onClick={e => e.preventDefault()}>API Documentation</a>
+        </div>
+      </footer>
     </div>
   );
 }

@@ -3,7 +3,6 @@ import { useAuth } from '../context/AuthContext';
 import { DataTable } from '../components/ui/DataTable';
 import { Pagination } from '../components/ui/Pagination';
 import { CreateProductModal } from '../components/modals/CreateProductModal';
-import { Package, Plus, Search, Layers, DollarSign, Archive } from 'lucide-react';
 
 export function Products() {
   const { apiFetch, isDemoMode } = useAuth();
@@ -40,12 +39,12 @@ export function Products() {
   );
 
   const columns = [
-    { key: 'id', label: 'SKU / ID', render: (row) => <code className="code-tag" style={{ color: 'var(--cyan)' }}>{row.id}</code> },
-    { key: 'name', label: 'Product Name', render: (row) => <strong className="text-bright">{row.name}</strong> },
-    { key: 'description', label: 'Description', render: (row) => <span className="text-secondary">{row.description || '—'}</span> },
-    { key: 'price', label: 'Price', render: (row) => <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--emerald)' }}>${Number(row.price).toFixed(2)}</span> },
-    { key: 'stockQuantity', label: 'In Stock', render: (row) => (
-      <span className={`badge ${row.stockQuantity > 20 ? 'badge-green' : row.stockQuantity > 0 ? 'badge-yellow' : 'badge-red'}`}>
+    { key: 'id', label: 'SKU / ID', render: (row) => <code className="code-tag">{row.id}</code> },
+    { key: 'name', label: 'Product Name', render: (row) => <strong style={{ color: 'var(--text-bright)' }}>{row.name}</strong> },
+    { key: 'description', label: 'Description', render: (row) => <span className="text-secondary">{row.description || ''}</span> },
+    { key: 'price', label: 'Price', render: (row) => <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>${Number(row.price).toFixed(2)}</span> },
+    { key: 'stockQuantity', label: 'Stock Level', render: (row) => (
+      <span className={`badge ${row.stockQuantity > 20 ? 'badge-green' : row.stockQuantity > 0 ? 'badge-amber' : 'badge-red'}`}>
         {row.stockQuantity} units
       </span>
     )}
@@ -57,69 +56,45 @@ export function Products() {
 
   return (
     <div className="products-page">
-      <div className="page-header flex-between mb-6 flex-wrap gap-4">
+      <div className="page-header flex justify-between items-center mb-4 flex-wrap gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="badge badge-cyan flex items-center gap-1">
-              <Package size={12} /> Inventory & Items
-            </span>
-          </div>
           <h1>Product Catalog</h1>
-          <p>Manage software packages, computing items, and tenant inventory.</p>
+          <p>Manage software packages, pricing models, and tenant product inventory.</p>
         </div>
-        <button className="btn btn-primary flex items-center gap-2" onClick={() => setModalOpen(true)}>
-          <Plus size={16} /> New Product
+        <button className="btn btn-primary" onClick={() => setModalOpen(true)}>
+          + Add Product
         </button>
       </div>
 
-      {/* Quick Summary Bar */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="glass-card card-p flex items-center gap-3">
-          <div className="stat-icon" style={{ background: 'var(--cyan-soft)', color: 'var(--cyan)' }}>
-            <Layers size={18} />
-          </div>
-          <div>
-            <div className="text-xs text-secondary">Total Products</div>
-            <div className="text-xl font-bold text-bright">{products.length}</div>
-          </div>
+      <div className="stats-grid mb-4">
+        <div className="stat-card">
+          <div className="stat-label">Total SKUs</div>
+          <div className="stat-value">{products.length}</div>
         </div>
 
-        <div className="glass-card card-p flex items-center gap-3">
-          <div className="stat-icon" style={{ background: 'var(--emerald-soft)', color: 'var(--emerald)' }}>
-            <Archive size={18} />
-          </div>
-          <div>
-            <div className="text-xs text-secondary font-medium">Total Stock Units</div>
-            <div className="text-xl font-bold text-bright">{products.reduce((acc, p) => acc + (p.stockQuantity || 0), 0)}</div>
-          </div>
+        <div className="stat-card">
+          <div className="stat-label">Total Stock Units</div>
+          <div className="stat-value">{products.reduce((acc, p) => acc + (p.stockQuantity || 0), 0)}</div>
         </div>
 
-        <div className="glass-card card-p flex items-center gap-3">
-          <div className="stat-icon" style={{ background: 'var(--amber-soft)', color: 'var(--amber)' }}>
-            <DollarSign size={18} />
-          </div>
-          <div>
-            <div className="text-xs text-secondary font-medium">Avg Product Price</div>
-            <div className="text-xl font-bold text-bright">
-              ${products.length ? (products.reduce((acc, p) => acc + Number(p.price || 0), 0) / products.length).toFixed(2) : '0.00'}
-            </div>
+        <div className="stat-card">
+          <div className="stat-label">Average Item Price</div>
+          <div className="stat-value">
+            ${products.length ? (products.reduce((acc, p) => acc + Number(p.price || 0), 0) / products.length).toFixed(2) : '0.00'}
           </div>
         </div>
       </div>
 
-      <div className="glass-card card-p">
-        <div className="flex items-center justify-between gap-4 mb-4">
-          <div className="relative flex-1 max-w-sm">
-            <Search size={16} className="absolute left-3 top-3 text-secondary" style={{ position: 'absolute', left: '12px', top: '10px', color: 'var(--text-muted)' }} />
-            <input 
-              type="text" 
-              className="input pl-9" 
-              placeholder="Search products by SKU or name..." 
-              value={search} 
-              onChange={e => setSearch(e.target.value)} 
-              style={{ paddingLeft: '36px' }}
-            />
-          </div>
+      <div className="card card-p">
+        <div className="mb-4">
+          <input 
+            type="text" 
+            className="input" 
+            placeholder="Search by product SKU or name..." 
+            value={search} 
+            onChange={e => setSearch(e.target.value)} 
+            style={{ maxWidth: '360px' }}
+          />
         </div>
 
         <DataTable columns={columns} data={filteredProducts} loading={loading} />
@@ -131,6 +106,15 @@ export function Products() {
         onClose={() => setModalOpen(false)} 
         onProductCreated={handleProductCreated} 
       />
+
+      <footer className="app-footer">
+        <div>NexusSaaS Enterprise v1.0.0</div>
+        <div className="flex gap-4">
+          <a href="#" onClick={e => e.preventDefault()}>Terms of Service</a>
+          <a href="#" onClick={e => e.preventDefault()}>Privacy Policy</a>
+          <a href="#" onClick={e => e.preventDefault()}>API Documentation</a>
+        </div>
+      </footer>
     </div>
   );
 }
