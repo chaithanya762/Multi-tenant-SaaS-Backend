@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 
 export function Topbar({ toggleSidebar }) {
-  const { tenantId, isDemoMode } = useAuth();
+  const { tenantId } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
 
@@ -33,11 +33,6 @@ export function Topbar({ toggleSidebar }) {
       </div>
 
       <div className="flex items-center gap-3">
-        {isDemoMode ? (
-          <span className="badge badge-amber">Demo Mode</span>
-        ) : (
-          <span className="badge badge-green">Live Production</span>
-        )}
         <span className="badge badge-blue font-mono">
           Tenant: {tenantId || 'global'}
         </span>

@@ -5,7 +5,7 @@ import { Pagination } from '../components/ui/Pagination';
 import { CreateProductModal } from '../components/modals/CreateProductModal';
 
 export function Products() {
-  const { apiFetch, isDemoMode } = useAuth();
+  const { apiFetch } = useAuth();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
@@ -16,36 +16,32 @@ export function Products() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const res = await apiFetch(`/v1/products?page=${page}&size=10`);
-      if (res._demo) {
-        setProducts([
-          { id: 'prod-101', name: 'Cloud SaaS Basic', price: 29.00, stockQuantity: 99, description: 'Starter multi-tenant package' },
-          { id: 'prod-102', name: 'Enterprise SaaS Pro', price: 99.00, stockQuantity: 45, description: 'High scale processing cluster' },
-          { id: 'prod-103', name: 'RLS Security Addon', price: 149.00, stockQuantity: 12, description: 'Automated database policy enforcement' }
-        ]);
-        setTotalPages(1);
-      } else {
-        setProducts(res.content || []);
+      try {
+        const res = await apiFetch(`/v1/products?page=${page}&size=10`);
+        setProducts(res.content || res || []);
         setTotalPages(res.totalPages || 1);
+      } catch (e) {
+        setProducts([]);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     load();
   }, [apiFetch, page]);
 
   const filteredProducts = products.filter(p => 
     p.name?.toLowerCase().includes(search.toLowerCase()) || 
-    p.id?.toLowerCase().includes(search.toLowerCase())
+    String(p.id).toLowerCase().includes(search.toLowerCase())
   );
 
   const columns = [
     { key: 'id', label: 'SKU / ID', render: (row) => <code className="code-tag">{row.id}</code> },
     { key: 'name', label: 'Product Name', render: (row) => <strong style={{ color: 'var(--text-bright)' }}>{row.name}</strong> },
     { key: 'description', label: 'Description', render: (row) => <span className="text-secondary">{row.description || ''}</span> },
-    { key: 'price', label: 'Price', render: (row) => <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>${Number(row.price).toFixed(2)}</span> },
+    { key: 'price', label: 'Price', render: (row) => <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>${Number(row.price || 0).toFixed(2)}</span> },
     { key: 'stockQuantity', label: 'Stock Level', render: (row) => (
       <span className={`badge ${row.stockQuantity > 20 ? 'badge-green' : row.stockQuantity > 0 ? 'badge-amber' : 'badge-red'}`}>
-        {row.stockQuantity} units
+        {row.stockQuantity ?? 0} units
       </span>
     )}
   ];

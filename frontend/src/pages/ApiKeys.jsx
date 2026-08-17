@@ -1,98 +1,96 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { DataTable } from '../components/ui/DataTable';
-import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 
 export function ApiKeys() {
-  const { apiFetch, addToast, isDemoMode } = useAuth();
+  const { apiFetch, addToast } = useAuth();
   const [keys, setKeys] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [newKey, setNewKey] = useState('');
-  const [keyToRevoke, setKeyToRevoke] = useState(null);
-  
+  const [newKeyName, setNewKeyName] = useState('');
+  const [newKey, setNewKey] = useState(null);
+
   useEffect(() => {
-    const load = async () => {
+    const fetchKeys = async () => {
       setLoading(true);
-      const res = await apiFetch('/v1/api-keys');
-      if (res._demo) {
-        setKeys([{ id: 'k1', name: 'Prod Key', prefix: 'sk_live_...a1b2', scopes: 'read,write' }]);
-      } else {
+      try {
+        const res = await apiFetch('/v1/api-keys');
         setKeys(res.content || res || []);
+      } catch (e) {
+        setKeys([]);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
-    load();
+    fetchKeys();
   }, [apiFetch]);
 
-  const handleCreate = async () => {
+  const handleCreateKey = async (e) => {
+    e.preventDefault();
     try {
-      const res = await apiFetch('/v1/api-keys', { method: 'POST', body: JSON.stringify({ name: 'New Key', scopes: 'read' }) });
-      if (res._demo) {
-        const mockKey = { id: Date.now().toString(), name: 'New Key', prefix: 'ak_live_...test', scopes: 'read' };
-        setKeys([...keys, mockKey]);
-        setNewKey('ak_live_demo_secret_key_889210491');
-      } else {
-        setKeys([...keys, res]);
-        setNewKey(res.secret || 'Secret hidden');
-      }
-      addToast('API Key created', 'success');
+      const res = await apiFetch('/v1/api-keys', {
+        method: 'POST',
+        body: JSON.stringify({ name: newKeyName })
+      });
+      setNewKey(res.token || res.key || 'ak_live_secret_key_generated');
+      setKeys([...keys, res]);
+      addToast('API Key generated successfully', 'success');
+      setNewKeyName('');
     } catch (err) {
-      addToast(err.message, 'error');
-    }
-  };
-
-  const handleRevokeConfirm = async () => {
-    if (!keyToRevoke) return;
-    
-    try {
-      const res = await apiFetch(`/v1/api-keys/${keyToRevoke.id}`, { method: 'DELETE' });
-      setKeys(keys.filter(k => k.id !== keyToRevoke.id));
-      addToast('API Key revoked', 'success');
-    } catch (err) {
-      addToast(err.message, 'error');
-    } finally {
-      setKeyToRevoke(null);
+      addToast('Failed to generate key: ' + err.message, 'error');
     }
   };
 
   const columns = [
-    { key: 'name', label: 'Key Name', render: (row) => <strong style={{ fontWeight: 600 }}>{row.name}</strong> },
-    { key: 'prefix', label: 'Key Prefix', render: (row) => <code className="code-tag">{row.prefix}</code> },
-    { key: 'scopes', label: 'Permission Scopes', render: (row) => <span className="badge badge-purple">{row.scopes}</span> },
-    { key: 'actions', label: 'Actions', render: (row) => (
-      <button className="btn btn-danger btn-xs" onClick={() => setKeyToRevoke(row)}>Revoke Key</button>
-    )}
+    { key: 'name', label: 'Key Identifier', render: (row) => <strong style={{ color: 'var(--text-bright)' }}>{row.name}</strong> },
+    { key: 'prefix', label: 'Token Prefix', render: (row) => <code className="code-tag">{row.prefix || row.keyPrefix || 'ak_live_...'}</code> },
+    { key: 'scopes', label: 'Permissions', render: (row) => <span className="badge badge-blue">{row.scopes || 'READ_WRITE'}</span> },
+    { key: 'createdAt', label: 'Created', render: (row) => <span className="text-secondary">{row.createdAt ? new Date(row.createdAt).toLocaleDateString() : 'Active'}</span> }
   ];
 
   return (
-    <div>
-      <div className="page-header">
-        <div>
-          <h1>API Keys & Credentials</h1>
-          <p>Generate, inspect, and revoke programmatic authentication tokens.</p>
-        </div>
-        <button className="btn btn-primary" onClick={handleCreate}>+ Generate API Key</button>
+    <div className="api-keys-page">
+      <div className="page-header mb-4">
+        <h1>API Keys & Credentials</h1>
+        <p>Generate and manage programmatic API credentials for tenant integrations.</p>
       </div>
 
-      {newKey && (
-        <div className="glass-card card-p mb-6" style={{ borderColor: 'var(--green)' }}>
-          <h4 style={{ color: 'var(--green)', marginBottom: '8px' }}>New API Key Generated</h4>
-          <p style={{ fontSize: '0.875rem', marginBottom: '16px' }}>Copy this key now. You won't be able to see it again!</p>
-          <div className="secret-box">{newKey}</div>
-        </div>
-      )}
+      <div className="card card-p mb-4">
+        <h3 className="mb-2">Generate New API Key</h3>
+        <form onSubmit={handleCreateKey} className="flex gap-3 items-center flex-wrap">
+          <div className="form-group" style={{ flex: '1 1 240px' }}>
+            <label>Key Name / Description</label>
+            <input 
+              required 
+              className="input" 
+              placeholder="e.g. Production Ingestion Service" 
+              value={newKeyName} 
+              onChange={e => setNewKeyName(e.target.value)} 
+            />
+          </div>
+          <button type="submit" className="btn btn-primary" style={{ marginTop: '22px' }}>Generate Secret Key</button>
+        </form>
 
-      <div className="glass-card card-p">
-        <DataTable columns={columns} data={keys} loading={loading} emptyMessage="No API keys found." />
+        {newKey && (
+          <div className="mt-4 p-3 card" style={{ background: 'var(--bg-surface)' }}>
+            <div className="text-xs text-secondary mb-1">Copy your secret key now. It will not be shown again:</div>
+            <code className="code-tag font-mono" style={{ color: 'var(--green)', wordBreak: 'break-all' }}>{newKey}</code>
+          </div>
+        )}
       </div>
 
-      <ConfirmDialog 
-        isOpen={!!keyToRevoke}
-        title="Revoke API Key"
-        message={`Are you sure you want to revoke "${keyToRevoke?.name}"? Any applications using this key will immediately lose access.`}
-        onConfirm={handleRevokeConfirm}
-        onCancel={() => setKeyToRevoke(null)}
-      />
+      <div className="card card-p">
+        <h3 className="mb-4">Active Credentials</h3>
+        <DataTable columns={columns} data={keys} loading={loading} />
+      </div>
+
+      <footer className="app-footer">
+        <div>NexusSaaS Enterprise v1.0.0</div>
+        <div className="flex gap-4">
+          <a href="#" onClick={e => e.preventDefault()}>Terms of Service</a>
+          <a href="#" onClick={e => e.preventDefault()}>Privacy Policy</a>
+          <a href="#" onClick={e => e.preventDefault()}>API Documentation</a>
+        </div>
+      </footer>
     </div>
   );
 }

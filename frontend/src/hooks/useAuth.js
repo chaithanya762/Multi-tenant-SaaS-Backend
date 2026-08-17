@@ -3,7 +3,6 @@ import { useState, useCallback } from 'react';
 export function useAuth() {
   const [token, setTokenState] = useState(localStorage.getItem('saas_token') || '');
   const [tenantId, setTenantIdState] = useState(localStorage.getItem('saas_tenant') || '');
-  const [isDemoMode, setIsDemoMode] = useState(false);
 
   const setToken = useCallback((newToken) => {
     setTokenState(newToken);
@@ -38,8 +37,6 @@ export function useAuth() {
     setToken,
     tenantId,
     setTenantId,
-    isDemoMode,
-    setIsDemoMode,
     login,
     logout,
     isAuthenticated: !!token

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 export function AuthScreen() {
-  const { login, apiFetch, addToast, setIsDemoMode } = useAuth();
+  const { login, apiFetch, addToast } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [form, setForm] = useState({ tenantId: 'tenant-alpha', username: 'alpha-admin', email: '', password: 'password123' });
   const [loading, setLoading] = useState(false);
@@ -20,12 +20,6 @@ export function AuthScreen() {
         body: JSON.stringify(body)
       });
 
-      if (res._demo) {
-        login('demo-token-123', form.tenantId || 'tenant-alpha');
-        addToast('Demo Mode Login Successful', 'success');
-        return;
-      }
-
       if (res.token) {
         login(res.token, form.tenantId);
         addToast(`Welcome, ${form.username}`, 'success');
@@ -38,12 +32,6 @@ export function AuthScreen() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const demoLogin = () => {
-    setIsDemoMode(true);
-    login('demo-token-123', 'tenant-alpha');
-    addToast('Demo Mode Activated', 'info');
   };
 
   return (
@@ -117,12 +105,6 @@ export function AuthScreen() {
               {isLogin ? 'Create a new account' : 'Already have an account? Sign in'}
             </a>
           </div>
-
-          <div style={{ margin: '16px 0', borderTop: '1px solid var(--border-subtle)' }}></div>
-
-          <button className="btn btn-secondary" onClick={demoLogin} style={{ width: '100%', justifyContent: 'center' }}>
-            Offline Demo Mode
-          </button>
         </div>
 
         <div className="auth-footer-links">

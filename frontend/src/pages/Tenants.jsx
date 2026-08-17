@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { DataTable } from '../components/ui/DataTable';
 
 export function Tenants() {
-  const { apiFetch, addToast, isDemoMode } = useAuth();
+  const { apiFetch, addToast } = useAuth();
   const [tenants, setTenants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newTenant, setNewTenant] = useState({ id: '', name: '' });
@@ -11,61 +11,73 @@ export function Tenants() {
   useEffect(() => {
     const fetchTenants = async () => {
       setLoading(true);
-      const res = await apiFetch('/v1/tenants');
-      setTenants(res._demo ? [{ id: 't1', name: 'Acme Corp' }, { id: 't2', name: 'Globex' }] : res.content || res || []);
-      setLoading(false);
+      try {
+        const res = await apiFetch('/v1/tenants');
+        setTenants(res.content || res || []);
+      } catch (e) {
+        setTenants([]);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchTenants();
   }, [apiFetch]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    const res = await apiFetch('/v1/tenants', { method: 'POST', body: JSON.stringify(newTenant) });
-    if (res._demo) {
-      setTenants([...tenants, { ...newTenant }]);
-    } else {
+    try {
+      const res = await apiFetch('/v1/tenants', { method: 'POST', body: JSON.stringify(newTenant) });
       setTenants([...tenants, res]);
+      addToast('Tenant created successfully', 'success');
+      setNewTenant({ id: '', name: '' });
+    } catch (err) {
+      addToast('Failed to create tenant: ' + err.message, 'error');
     }
-    addToast('Tenant created', 'success');
-    setNewTenant({ id: '', name: '' });
   };
 
   const columns = [
     { key: 'id', label: 'Tenant ID', render: (row) => <code className="code-tag">{row.id}</code> },
-    { key: 'name', label: 'Display Name', render: (row) => <strong style={{ fontWeight: 600 }}>{row.name}</strong> },
-    { key: 'plan', label: 'Plan', render: (row) => <span className="badge badge-purple">{row.plan || 'ENTERPRISE'}</span> },
-    { key: 'status', label: 'Status', render: () => <span className="badge badge-green">● Active</span> }
+    { key: 'name', label: 'Display Name', render: (row) => <strong style={{ color: 'var(--text-bright)' }}>{row.name}</strong> },
+    { key: 'plan', label: 'Plan', render: (row) => <span className="badge badge-blue">{row.plan || 'ENTERPRISE'}</span> },
+    { key: 'status', label: 'Status', render: () => <span className="badge badge-green">Active</span> }
   ];
 
   return (
-    <div>
-      <div className="page-header">
-        <div>
-          <h1>Tenants Management</h1>
-          <p>Provision and inspect multi-tenant workspace organizations.</p>
-        </div>
+    <div className="tenants-page">
+      <div className="page-header mb-4">
+        <h1>Tenants Management</h1>
+        <p>Provision and inspect multi-tenant workspace organizations.</p>
       </div>
 
-      <div className="glass-card card-p mb-6">
+      <div className="card card-p mb-4">
         <h3 className="mb-2">Provision New Tenant</h3>
         <p className="subtext mb-4">Create an isolated database tenant boundary.</p>
-        <form onSubmit={handleCreate} className="flex-gap-12" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
+        <form onSubmit={handleCreate} className="flex gap-3 items-center flex-wrap">
           <div className="form-group" style={{ flex: '1 1 180px' }}>
             <label>Tenant ID (Slug)</label>
-            <input required className="input" placeholder="e.g. acme-corp" value={newTenant.id} onChange={e => setNewTenant({...newTenant, id: e.target.value})} />
+            <input required className="input" placeholder="e.g. tenant-gamma" value={newTenant.id} onChange={e => setNewTenant({...newTenant, id: e.target.value})} />
           </div>
           <div className="form-group" style={{ flex: '2 1 240px' }}>
             <label>Display Name</label>
-            <input required className="input" placeholder="Acme Corporation" value={newTenant.name} onChange={e => setNewTenant({...newTenant, name: e.target.value})} />
+            <input required className="input" placeholder="Gamma Corporation" value={newTenant.name} onChange={e => setNewTenant({...newTenant, name: e.target.value})} />
           </div>
-          <button type="submit" className="btn btn-primary">Provision Tenant</button>
+          <button type="submit" className="btn btn-primary" style={{ marginTop: '22px' }}>Provision Tenant</button>
         </form>
       </div>
 
-      <div className="glass-card card-p mt-6">
+      <div className="card card-p">
         <h3 className="mb-4">Registered Tenants</h3>
         <DataTable columns={columns} data={tenants} loading={loading} />
       </div>
+
+      <footer className="app-footer">
+        <div>NexusSaaS Enterprise v1.0.0</div>
+        <div className="flex gap-4">
+          <a href="#" onClick={e => e.preventDefault()}>Terms of Service</a>
+          <a href="#" onClick={e => e.preventDefault()}>Privacy Policy</a>
+          <a href="#" onClick={e => e.preventDefault()}>API Documentation</a>
+        </div>
+      </footer>
     </div>
   );
 }

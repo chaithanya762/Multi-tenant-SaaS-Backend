@@ -4,7 +4,7 @@ import { DataTable } from '../components/ui/DataTable';
 import { Pagination } from '../components/ui/Pagination';
 
 export function Orders() {
-  const { apiFetch, isDemoMode } = useAuth();
+  const { apiFetch } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
@@ -15,22 +15,15 @@ export function Orders() {
     const load = async () => {
       setLoading(true);
       const emailQuery = emailFilter ? `&email=${encodeURIComponent(emailFilter)}` : '';
-      const res = await apiFetch(`/v1/orders?page=${page}&size=10${emailQuery}`);
-      
-      if (res._demo) {
-        let demoOrders = [
-          { id: 'ORD-9821', email: 'customer@acme.com', total: 149.00, status: 'Completed' }, 
-          { id: 'ORD-9822', email: 'admin@globex.com', total: 299.00, status: 'Pending' },
-          { id: 'ORD-9823', email: 'user@enterprise.com', total: 49.00, status: 'Completed' }
-        ];
-        if (emailFilter) demoOrders = demoOrders.filter(o => o.email.includes(emailFilter));
-        setOrders(demoOrders);
-        setTotalPages(1);
-      } else {
-        setOrders(res.content || []);
+      try {
+        const res = await apiFetch(`/v1/orders?page=${page}&size=10${emailQuery}`);
+        setOrders(res.content || res || []);
         setTotalPages(res.totalPages || 1);
+      } catch (e) {
+        setOrders([]);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     
     const timeout = setTimeout(load, 300);

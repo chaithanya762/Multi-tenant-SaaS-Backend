@@ -1,100 +1,97 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { DataTable } from '../components/ui/DataTable';
-import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 
 export function Webhooks() {
-  const { apiFetch, addToast, isDemoMode } = useAuth();
+  const { apiFetch, addToast } = useAuth();
   const [webhooks, setWebhooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newHook, setNewHook] = useState({ url: '', events: 'order.created' });
-  const [hookToDelete, setHookToDelete] = useState(null);
-  
+
   useEffect(() => {
-    const load = async () => {
+    const fetchWebhooks = async () => {
       setLoading(true);
-      const res = await apiFetch('/v1/webhooks');
-      if (res._demo) {
-        setWebhooks([{ id: 'w1', url: 'https://acme.com/hook', events: 'order.created' }]);
-      } else {
+      try {
+        const res = await apiFetch('/v1/webhooks');
         setWebhooks(res.content || res || []);
+      } catch (e) {
+        setWebhooks([]);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
-    load();
+    fetchWebhooks();
   }, [apiFetch]);
 
-  const handleCreate = async (e) => {
+  const handleRegisterHook = async (e) => {
     e.preventDefault();
     try {
-      const res = await apiFetch('/v1/webhooks', { method: 'POST', body: JSON.stringify(newHook) });
-      setWebhooks([...webhooks, res._demo ? { id: Date.now().toString(), ...newHook } : res]);
-      addToast('Webhook Endpoint added', 'success');
+      const res = await apiFetch('/v1/webhooks', {
+        method: 'POST',
+        body: JSON.stringify(newHook)
+      });
+      setWebhooks([...webhooks, res]);
+      addToast('Webhook endpoint registered', 'success');
       setNewHook({ url: '', events: 'order.created' });
     } catch (err) {
-      addToast(err.message, 'error');
-    }
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!hookToDelete) return;
-    try {
-      const res = await apiFetch(`/v1/webhooks/${hookToDelete.id}`, { method: 'DELETE' });
-      setWebhooks(webhooks.filter(w => w.id !== hookToDelete.id));
-      addToast('Webhook deleted', 'success');
-    } catch (err) {
-      addToast(err.message, 'error');
-    } finally {
-      setHookToDelete(null);
+      addToast('Failed to register webhook: ' + err.message, 'error');
     }
   };
 
   const columns = [
     { key: 'url', label: 'Endpoint URL', render: (row) => <code className="code-tag">{row.url}</code> },
-    { key: 'events', label: 'Subscribed Events', render: (row) => <span className="badge badge-cyan">{row.events}</span> },
-    { key: 'status', label: 'Status', render: () => <span className="badge badge-green">● Active</span> },
-    { key: 'actions', label: 'Actions', render: (row) => (
-      <button className="btn btn-danger btn-xs" onClick={() => setHookToDelete(row)}>Remove</button>
-    )}
+    { key: 'events', label: 'Subscribed Events', render: (row) => <span className="badge badge-blue">{row.events}</span> },
+    { key: 'status', label: 'Status', render: () => <span className="badge badge-green">Active</span> }
   ];
 
   return (
-    <div>
-      <div className="page-header">
-        <div>
-          <h1>Webhook Endpoints</h1>
-          <p>Deliver real-time event notifications with exponential backoff retries.</p>
-        </div>
+    <div className="webhooks-page">
+      <div className="page-header mb-4">
+        <h1>Webhook Endpoints</h1>
+        <p>Configure HTTP webhook notifications for real-time tenant system events.</p>
       </div>
 
-      <div className="glass-card card-p mb-6">
+      <div className="card card-p mb-4">
         <h3 className="mb-2">Register Webhook Endpoint</h3>
-        <p className="subtext mb-4">Receive HTTP POST payloads when tenant resources update.</p>
-        <form onSubmit={handleCreate} className="flex-gap-12" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
+        <form onSubmit={handleRegisterHook} className="flex gap-3 items-center flex-wrap">
           <div className="form-group" style={{ flex: '2 1 240px' }}>
-            <label>Endpoint Target URL</label>
-            <input type="url" required className="input" placeholder="https://api.acme.com/v1/webhooks" value={newHook.url} onChange={e => setNewHook({...newHook, url: e.target.value})} />
+            <label>Destination URL</label>
+            <input 
+              required 
+              type="url"
+              className="input" 
+              placeholder="https://api.tenant.com/webhooks" 
+              value={newHook.url} 
+              onChange={e => setNewHook({...newHook, url: e.target.value})} 
+            />
           </div>
           <div className="form-group" style={{ flex: '1 1 180px' }}>
-            <label>Subscribed Event</label>
-            <input required className="input" placeholder="order.created" value={newHook.events} onChange={e => setNewHook({...newHook, events: e.target.value})} />
+            <label>Event Topic</label>
+            <input 
+              required 
+              className="input" 
+              placeholder="order.created" 
+              value={newHook.events} 
+              onChange={e => setNewHook({...newHook, events: e.target.value})} 
+            />
           </div>
-          <button type="submit" className="btn btn-primary">Add Endpoint</button>
+          <button type="submit" className="btn btn-primary" style={{ marginTop: '22px' }}>Register Webhook</button>
         </form>
       </div>
 
-      <div className="glass-card card-p">
+      <div className="card card-p">
         <h3 className="mb-4">Configured Endpoints</h3>
-        <DataTable columns={columns} data={webhooks} loading={loading} emptyMessage="No webhooks configured." />
+        <DataTable columns={columns} data={webhooks} loading={loading} />
       </div>
 
-      <ConfirmDialog 
-        isOpen={!!hookToDelete}
-        title="Delete Webhook"
-        message={`Are you sure you want to delete the webhook to ${hookToDelete?.url}?`}
-        onConfirm={handleDeleteConfirm}
-        onCancel={() => setHookToDelete(null)}
-      />
+      <footer className="app-footer">
+        <div>NexusSaaS Enterprise v1.0.0</div>
+        <div className="flex gap-4">
+          <a href="#" onClick={e => e.preventDefault()}>Terms of Service</a>
+          <a href="#" onClick={e => e.preventDefault()}>Privacy Policy</a>
+          <a href="#" onClick={e => e.preventDefault()}>API Documentation</a>
+        </div>
+      </footer>
     </div>
   );
 }

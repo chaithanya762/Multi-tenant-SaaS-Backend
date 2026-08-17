@@ -3,47 +3,51 @@ import { useAuth } from '../context/AuthContext';
 import { DataTable } from '../components/ui/DataTable';
 
 export function AuditLog() {
-  const { apiFetch, isDemoMode } = useAuth();
+  const { apiFetch } = useAuth();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   useEffect(() => {
-    const load = async () => {
+    const fetchLogs = async () => {
       setLoading(true);
-      const res = await apiFetch('/v1/audit-log');
-      if (res._demo) {
-        setLogs([{ id: 1, action: 'CREATE', resource: 'Order', user: 'admin', timestamp: new Date().toISOString() }]);
-      } else {
+      try {
+        const res = await apiFetch('/v1/audit-log');
         setLogs(res.content || res || []);
+      } catch (e) {
+        setLogs([]);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
-    load();
+    fetchLogs();
   }, [apiFetch]);
 
   const columns = [
-    { key: 'timestamp', label: 'Timestamp', render: (row) => <code className="code-tag">{new Date(row.timestamp).toLocaleString()}</code> },
-    { key: 'user', label: 'Actor', render: (row) => <strong style={{ fontWeight: 600 }}>{row.user}</strong> },
-    { key: 'action', label: 'Event Action', render: (row) => (
-      <span className={`badge ${row.action === 'CREATE' ? 'badge-green' : row.action === 'DELETE' ? 'badge-red' : 'badge-blue'}`}>
-        {row.action}
-      </span>
-    )},
-    { key: 'resource', label: 'Target Resource', render: (row) => <span className="badge badge-purple">{row.resource}</span> }
+    { key: 'action', label: 'Action Event', render: (row) => <strong style={{ color: 'var(--text-bright)' }}>{row.action}</strong> },
+    { key: 'resource', label: 'Target Resource', render: (row) => <code className="code-tag">{row.resource || row.entityName || 'System'}</code> },
+    { key: 'user', label: 'Performed By', render: (row) => <span className="text-secondary">{row.user || row.performedBy || 'admin'}</span> },
+    { key: 'timestamp', label: 'Timestamp', render: (row) => <span className="text-muted font-mono">{row.timestamp ? new Date(row.timestamp).toLocaleString() : 'Just now'}</span> }
   ];
 
   return (
-    <div>
-      <div className="page-header">
-        <div>
-          <h1>Audit Trail & Logs</h1>
-          <p>Immutable event log of actions taken within active tenant context.</p>
-        </div>
+    <div className="audit-log-page">
+      <div className="page-header mb-4">
+        <h1>System Audit Logs</h1>
+        <p>Immutable security trail of administrative and data mutations.</p>
       </div>
 
-      <div className="glass-card card-p">
-        <DataTable columns={columns} data={logs} loading={loading} emptyMessage="No audit logs recorded yet." />
+      <div className="card card-p">
+        <DataTable columns={columns} data={logs} loading={loading} />
       </div>
+
+      <footer className="app-footer">
+        <div>NexusSaaS Enterprise v1.0.0</div>
+        <div className="flex gap-4">
+          <a href="#" onClick={e => e.preventDefault()}>Terms of Service</a>
+          <a href="#" onClick={e => e.preventDefault()}>Privacy Policy</a>
+          <a href="#" onClick={e => e.preventDefault()}>API Documentation</a>
+        </div>
+      </footer>
     </div>
   );
 }

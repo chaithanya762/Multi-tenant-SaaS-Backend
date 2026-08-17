@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 export function RlsTester() {
-  const { apiFetch, isDemoMode, addToast } = useAuth();
+  const { apiFetch, addToast } = useAuth();
   const [dataA, setDataA] = useState([]);
   const [dataB, setDataB] = useState([]);
   const [running, setRunning] = useState(false);
@@ -10,20 +10,6 @@ export function RlsTester() {
   const testIsolation = async () => {
     setRunning(true);
     addToast('Executing database queries for tenant isolation check...', 'info');
-
-    if (isDemoMode) {
-      setTimeout(() => {
-        setDataA([
-          { id: 'prod-101', name: 'Alpha Cloud Package', price: 99.00, tenantId: 'tenant-alpha' }
-        ]);
-        setDataB([
-          { id: 'prod-201', name: 'Beta Analytics Package', price: 149.00, tenantId: 'tenant-beta' }
-        ]);
-        addToast('Isolation test completed (Demo)', 'success');
-        setRunning(false);
-      }, 300);
-      return;
-    }
 
     try {
       const resA = await apiFetch('/v1/products', { headers: { 'X-Tenant-ID': 'tenant-alpha' } });

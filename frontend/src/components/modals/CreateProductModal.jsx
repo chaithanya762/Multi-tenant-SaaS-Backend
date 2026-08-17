@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 
 export function CreateProductModal({ isOpen, onClose, onProductCreated }) {
-  const { apiFetch, addToast, isDemoMode } = useAuth();
+  const { apiFetch, addToast } = useAuth();
   const [form, setForm] = useState({ name: '', description: '', price: '', stockQuantity: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -37,18 +37,7 @@ export function CreateProductModal({ isOpen, onClose, onProductCreated }) {
         })
       });
 
-      if (res._demo) {
-        onProductCreated({
-          id: Date.now(),
-          name: form.name,
-          description: form.description,
-          price: priceNum,
-          stockQuantity: stockNum
-        });
-      } else {
-        onProductCreated(res);
-      }
-      
+      onProductCreated(res);
       addToast('Product created successfully', 'success');
       setForm({ name: '', description: '', price: '', stockQuantity: '' });
       onClose();
@@ -61,29 +50,33 @@ export function CreateProductModal({ isOpen, onClose, onProductCreated }) {
 
   return (
     <div className="modal-overlay">
-      <div className="modal-box">
-        <div className="modal-header">
+      <div className="modal-box card card-p">
+        <div className="modal-header mb-4">
           <h2>Create New Product</h2>
         </div>
-        <div className="modal-body">
-          {error && <div style={{ color: 'var(--red)', fontSize: '0.85rem' }}>{error}</div>}
-          <form id="create-product-form" onSubmit={handleSubmit} className="form-group">
-            <label>Product Name</label>
-            <input 
-              required 
-              className="input" 
-              value={form.name} 
-              onChange={e => setForm({...form, name: e.target.value})} 
-            />
+        <div className="modal-body mb-4">
+          {error && <div style={{ color: 'var(--red)', fontSize: '0.85rem', marginBottom: '12px' }}>{error}</div>}
+          <form id="create-product-form" onSubmit={handleSubmit} className="form-group gap-3">
+            <div className="form-group">
+              <label>Product Name</label>
+              <input 
+                required 
+                className="input" 
+                value={form.name} 
+                onChange={e => setForm({...form, name: e.target.value})} 
+              />
+            </div>
             
-            <label>Description</label>
-            <textarea 
-              className="input" 
-              value={form.description} 
-              onChange={e => setForm({...form, description: e.target.value})} 
-            />
+            <div className="form-group">
+              <label>Description</label>
+              <textarea 
+                className="input" 
+                value={form.description} 
+                onChange={e => setForm({...form, description: e.target.value})} 
+              />
+            </div>
             
-            <div className="grid-2">
+            <div className="grid grid-2 gap-3">
               <div className="form-group">
                 <label>Price</label>
                 <input 
@@ -108,8 +101,8 @@ export function CreateProductModal({ isOpen, onClose, onProductCreated }) {
             </div>
           </form>
         </div>
-        <div className="modal-footer">
-          <button className="btn btn-ghost" onClick={onClose} disabled={loading}>Cancel</button>
+        <div className="modal-footer flex justify-between">
+          <button className="btn btn-secondary" onClick={onClose} disabled={loading}>Cancel</button>
           <button form="create-product-form" type="submit" className="btn btn-primary" disabled={loading}>
             {loading ? 'Creating...' : 'Create'}
           </button>

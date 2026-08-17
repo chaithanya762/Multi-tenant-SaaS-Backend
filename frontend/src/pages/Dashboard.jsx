@@ -3,45 +3,42 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 export function Dashboard() {
-  const { apiFetch, isDemoMode, tenantId } = useAuth();
+  const { apiFetch, tenantId } = useAuth();
   const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchStats = async () => {
-      if (isDemoMode) {
-        setStats({ apiCalls: 124850, orders: 342, products: 12, health: 'Operational', latency: '14ms' });
-        return;
-      }
-      
+      setLoading(true);
       try {
         const [productsRes, ordersRes, healthRes] = await Promise.all([
-          apiFetch('/v1/products?page=0&size=1'),
-          apiFetch('/v1/orders?page=0&size=1'),
+          apiFetch('/v1/products?page=0&size=1').catch(() => ({ totalElements: 0 })),
+          apiFetch('/v1/orders?page=0&size=1').catch(() => ({ totalElements: 0 })),
           fetch('/actuator/health').then(res => res.ok ? res.json() : { status: 'DOWN' }).catch(() => ({ status: 'DOWN' }))
         ]);
 
         setStats({
-          apiCalls: 84390,
-          orders: ordersRes.totalElements || 0,
-          products: productsRes.totalElements || 0,
-          health: healthRes.status === 'UP' ? 'Operational' : 'Degraded',
-          latency: '18ms'
+          orders: ordersRes.totalElements !== undefined ? ordersRes.totalElements : (ordersRes.content ? ordersRes.content.length : 0),
+          products: productsRes.totalElements !== undefined ? productsRes.totalElements : (productsRes.content ? productsRes.content.length : 0),
+          health: healthRes.status === 'UP' ? 'Operational' : 'Offline'
         });
       } catch (err) {
-        setStats({ apiCalls: 0, orders: 0, products: 0, health: 'Error', latency: 'N/A' });
+        setStats({ orders: 0, products: 0, health: 'Offline' });
+      } finally {
+        setLoading(false);
       }
     };
     
     fetchStats();
-  }, [apiFetch, isDemoMode]);
+  }, [apiFetch]);
 
   return (
     <div className="dashboard-page">
-      <div className="page-header flex justify-between items-center">
+      <div className="page-header flex justify-between items-center flex-wrap gap-4">
         <div>
           <h1>Tenant Metrics Overview</h1>
-          <p>Real-time operational metrics for tenant ID: <strong className="code-tag">{tenantId || 'demo-tenant'}</strong></p>
+          <p>Real-time operational metrics for tenant ID: <strong className="code-tag">{tenantId || 'global'}</strong></p>
         </div>
         <div className="flex gap-2">
           <button className="btn btn-secondary" onClick={() => navigate('/products')}>Products</button>
@@ -52,27 +49,31 @@ export function Dashboard() {
 
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-label">API Volume (30d)</div>
-          <div className="stat-value">{stats?.apiCalls ? stats.apiCalls.toLocaleString() : '---'}</div>
-          <div className="stat-meta">+14.2% from previous cycle</div>
-        </div>
-
-        <div className="stat-card">
           <div className="stat-label">Total Orders</div>
-          <div className="stat-value">{stats?.orders !== undefined ? stats.orders.toLocaleString() : '---'}</div>
-          <div className="stat-meta">Active customer orders</div>
+          <div className="stat-value">{loading ? '...' : (stats?.orders ?? 0)}</div>
+          <div className="stat-meta">Active tenant orders</div>
         </div>
 
         <div className="stat-card">
           <div className="stat-label">Active Products</div>
-          <div className="stat-value">{stats?.products !== undefined ? stats.products.toLocaleString() : '---'}</div>
-          <div className="stat-meta">Tenant SKU inventory</div>
+          <div className="stat-value">{loading ? '...' : (stats?.products ?? 0)}</div>
+          <div className="stat-meta">Inventory SKU count</div>
         </div>
 
         <div className="stat-card">
-          <div className="stat-label">System Latency (P99)</div>
-          <div className="stat-value">{stats?.latency || '---'}</div>
-          <div className="stat-meta">Database & Gateway RTT</div>
+          <div className="stat-label">Backend API Status</div>
+          <div className="stat-value" style={{ fontSize: '1.1rem' }}>
+            <span className={`badge ${stats?.health === 'Operational' ? 'badge-green' : 'badge-red'}`}>
+              {stats?.health || 'Offline'}
+            </span>
+          </div>
+          <div className="stat-meta">Spring Boot Actuator Health</div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-label">Tenant ID</div>
+          <div className="stat-value font-mono" style={{ fontSize: '1.1rem' }}>{tenantId || 'global'}</div>
+          <div className="stat-meta">Session Row-Level Isolation</div>
         </div>
       </div>
 
@@ -97,13 +98,13 @@ export function Dashboard() {
                 <td>Spring Boot Core API</td>
                 <td>Backend Gateway</td>
                 <td>JWT Claims Verification</td>
-                <td><span className="badge badge-green">{stats?.health || 'Operational'}</span></td>
+                <td><span className={`badge ${stats?.health === 'Operational' ? 'badge-green' : 'badge-red'}`}>{stats?.health || 'Offline'}</span></td>
               </tr>
               <tr>
                 <td>PostgreSQL Engine</td>
                 <td>Relational Database</td>
                 <td>Row-Level Security (RLS)</td>
-                <td><span className="badge badge-green">Active</span></td>
+                <td><span className="badge badge-blue">Active</span></td>
               </tr>
               <tr>
                 <td>Rate Limiting Engine</td>

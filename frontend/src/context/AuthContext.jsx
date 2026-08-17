@@ -11,19 +11,17 @@ export function AuthProvider({ children }) {
 
   const handleLogout = () => {
     auth.logout();
-    toast.addToast('Logged out successfully', 'success');
+    toast.addToast('Logged out successfully', 'info');
   };
 
   const apiFetch = useMemo(() => {
     return createApiClient(
       auth.token,
       auth.tenantId,
-      auth.isDemoMode,
-      auth.setIsDemoMode,
       toast.addToast,
       handleLogout
     );
-  }, [auth.token, auth.tenantId, auth.isDemoMode, auth.setIsDemoMode, toast.addToast]);
+  }, [auth.token, auth.tenantId, toast.addToast]);
 
   const value = {
     ...auth,
