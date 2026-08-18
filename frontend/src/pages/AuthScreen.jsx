@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { getApiBaseUrl } from '../api/apiClient';
 
 const DEFAULT_RENDER_URL = 'https://multitenant-backend-4lh0.onrender.com';
 
 export function AuthScreen() {
   const { login, apiFetch, addToast } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [isLogin, setIsLogin] = useState(true);
   const [form, setForm] = useState({ tenantId: 'tenant-alpha', username: 'alpha-admin', email: '', password: 'password123' });
   const [apiUrl, setApiUrl] = useState(() => {
@@ -70,6 +72,16 @@ export function AuthScreen() {
 
   return (
     <div className="auth-shell">
+      <div className="auth-topbar-actions">
+        <button 
+          className="btn btn-secondary" 
+          onClick={toggleTheme} 
+          style={{ padding: '6px 12px', fontSize: '0.78rem' }}
+        >
+          {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+        </button>
+      </div>
+
       <div className="auth-container">
         <div className="auth-header">
           <div className="auth-logo">N</div>

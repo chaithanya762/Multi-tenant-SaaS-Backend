@@ -1,10 +1,11 @@
 /* ============================================================
    NexusSaaS Enterprise — Utility-First Clean Design System
+   Dual Theme: High-Contrast Dark & Enterprise Light
    ============================================================ */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-:root {
+:root, [data-theme="dark"] {
   /* Clean Dark Theme (Slate & Deep Cobalt) */
   --bg-base:        #0d131f;
   --bg-surface:     #131b2e;
@@ -12,10 +13,11 @@
   --bg-card-hover:  #1d2a45;
   --bg-input:       #111827;
   --bg-sidebar:     #0b101a;
+  --nav-hover:      rgba(255, 255, 255, 0.05);
 
   --border-subtle:  #1e293b;
   --border-card:    #243047;
-  --border-focus:   #2563eb;
+  --border-focus:   #3b82f6;
 
   --text-primary:   #f1f5f9;
   --text-secondary: #94a3b8;
@@ -24,18 +26,22 @@
 
   --accent:         #2563eb;
   --accent-hover:   #1d4ed8;
-  --accent-soft:    rgba(37, 99, 235, 0.12);
+  --accent-soft:    rgba(37, 99, 235, 0.15);
 
   --green:          #16a34a;
-  --green-soft:     rgba(22, 163, 74, 0.12);
+  --green-soft:     rgba(22, 163, 74, 0.15);
   --amber:          #d97706;
-  --amber-soft:     rgba(217, 119, 6, 0.12);
+  --amber-soft:     rgba(217, 119, 6, 0.15);
   --red:            #dc2626;
-  --red-soft:       rgba(220, 38, 38, 0.12);
+  --red-soft:       rgba(220, 38, 38, 0.15);
   --blue:           #2563eb;
-  --blue-soft:      rgba(37, 99, 235, 0.12);
+  --blue-soft:      rgba(37, 99, 235, 0.15);
+  --tag-bg:         rgba(255, 255, 255, 0.05);
+  --badge-slate-bg: rgba(255, 255, 255, 0.07);
 
-  --radius-xs:  2px;
+  --card-shadow:    0 1px 3px rgba(0, 0, 0, 0.2);
+
+  --radius-xs:  3px;
   --radius-sm:  4px;
   --radius-md:  6px;
   --radius-lg:  8px;
@@ -48,21 +54,40 @@
 }
 
 [data-theme="light"] {
+  /* Clean Enterprise Light Mode */
   --bg-base:        #f8fafc;
-  --bg-surface:     #f1f5f9;
+  --bg-surface:     #ffffff;
   --bg-card:        #ffffff;
   --bg-card-hover:  #f8fafc;
   --bg-input:       #ffffff;
-  --bg-sidebar:     #0f172a;
+  --bg-sidebar:     #ffffff;
+  --nav-hover:      #f1f5f9;
 
   --border-subtle:  #e2e8f0;
-  --border-card:    #cbd5e1;
+  --border-card:    #e2e8f0;
   --border-focus:   #2563eb;
 
   --text-primary:   #0f172a;
   --text-secondary: #475569;
   --text-muted:     #64748b;
   --text-bright:    #020617;
+
+  --accent:         #2563eb;
+  --accent-hover:   #1d4ed8;
+  --accent-soft:    #eff6ff;
+
+  --green:          #15803d;
+  --green-soft:     #f0fdf4;
+  --amber:          #b45309;
+  --amber-soft:     #fffbeb;
+  --red:            #b91c1c;
+  --red-soft:       #fef2f2;
+  --blue:           #1d4ed8;
+  --blue-soft:      #eff6ff;
+  --tag-bg:         #f1f5f9;
+  --badge-slate-bg: #f1f5f9;
+
+  --card-shadow:    0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 body {
@@ -78,6 +103,7 @@ body {
 .app-shell {
   display: flex;
   min-height: 100vh;
+  background: var(--bg-base);
 }
 
 .sidebar {
@@ -89,20 +115,22 @@ body {
   position: fixed;
   top: 0; bottom: 0; left: 0;
   z-index: 100;
+  transition: background 0.15s, border-color 0.15s;
 }
 
 .sidebar-brand {
-  padding: 16px 20px;
+  padding: 14px 18px;
   display: flex;
   align-items: center;
   gap: 10px;
   border-bottom: 1px solid var(--border-subtle);
+  height: var(--header-h);
 }
 
 .brand-logo {
   width: 28px; height: 28px;
   background: var(--accent);
-  color: #fff;
+  color: #ffffff;
   border-radius: var(--radius-sm);
   display: flex; align-items: center; justify-content: center;
   font-weight: 700; font-size: 0.9rem;
@@ -110,21 +138,21 @@ body {
 
 .brand-name {
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   color: var(--text-bright);
   letter-spacing: -0.01em;
 }
 
 .brand-badge {
-  font-size: 0.65rem;
-  font-weight: 600;
+  font-size: 0.62rem;
+  font-weight: 700;
   color: var(--accent);
   letter-spacing: 0.05em;
 }
 
 .sidebar-nav {
   flex: 1;
-  padding: 16px 12px;
+  padding: 14px 10px;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -137,7 +165,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-muted);
-  padding: 8px 10px 4px;
+  padding: 6px 10px 4px;
 }
 
 .nav-item {
@@ -151,11 +179,12 @@ body {
   font-size: 0.84rem;
   font-weight: 500;
   transition: background 0.12s, color 0.12s;
+  cursor: pointer;
 }
 
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-primary);
+  background: var(--nav-hover);
+  color: var(--text-bright);
 }
 
 .nav-item.active {
@@ -165,7 +194,7 @@ body {
 }
 
 .sidebar-footer {
-  padding: 12px;
+  padding: 10px 12px;
   border-top: 1px solid var(--border-subtle);
 }
 
@@ -175,6 +204,7 @@ body {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  background: var(--bg-base);
 }
 
 .topbar {
@@ -185,6 +215,7 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
+  transition: background 0.15s, border-color 0.15s;
 }
 
 .page-content {
@@ -216,6 +247,8 @@ body {
   background: var(--bg-card);
   border: 1px solid var(--border-card);
   border-radius: var(--radius-md);
+  box-shadow: var(--card-shadow);
+  transition: background 0.15s, border-color 0.15s;
 }
 
 .card-p { padding: 20px; }
@@ -251,11 +284,12 @@ body {
   border: 1px solid var(--border-card);
   border-radius: var(--radius-md);
   padding: 16px;
+  box-shadow: var(--card-shadow);
 }
 
 .stat-label {
-  font-size: 0.76rem;
-  font-weight: 500;
+  font-size: 0.74rem;
+  font-weight: 600;
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -280,6 +314,7 @@ body {
   overflow-x: auto;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-card);
+  background: var(--bg-card);
 }
 
 table {
@@ -315,11 +350,11 @@ tr:hover td { background: var(--bg-card-hover); }
 .code-tag {
   font-family: var(--font-mono);
   font-size: 0.78rem;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--tag-bg);
   border: 1px solid var(--border-subtle);
   padding: 2px 6px;
   border-radius: var(--radius-xs);
-  color: var(--text-secondary);
+  color: var(--text-primary);
 }
 
 /* ── Badges ──────────────────────────────────────────── */
@@ -337,7 +372,7 @@ tr:hover td { background: var(--bg-card-hover); }
 .badge-amber  { background: var(--amber-soft); color: var(--amber); }
 .badge-red    { background: var(--red-soft);   color: var(--red); }
 .badge-blue   { background: var(--blue-soft);  color: var(--blue); }
-.badge-slate  { background: rgba(255,255,255,0.06); color: var(--text-secondary); }
+.badge-slate  { background: var(--badge-slate-bg); color: var(--text-secondary); border: 1px solid var(--border-subtle); }
 
 /* ── Buttons ─────────────────────────────────────────── */
 .btn {
@@ -350,7 +385,7 @@ tr:hover td { background: var(--bg-card-hover); }
   font-weight: 600;
   cursor: pointer;
   border: 1px solid transparent;
-  transition: background 0.12s;
+  transition: background 0.12s, border-color 0.12s;
   white-space: nowrap;
 }
 
@@ -399,13 +434,14 @@ tr:hover td { background: var(--bg-card-hover); }
   font-size: 0.85rem;
   outline: none;
   font-family: var(--font-sans);
+  transition: border-color 0.12s;
 }
 
 .input:focus {
   border-color: var(--border-focus);
 }
 
-/* ── Clean Login Page (AWS/Vercel Enterprise Style) ──── */
+/* ── Clean Login Page (Enterprise Dual Theme) ───────── */
 .auth-shell {
   min-height: 100vh;
   display: flex;
@@ -414,6 +450,14 @@ tr:hover td { background: var(--bg-card-hover); }
   justify-content: center;
   background: var(--bg-base);
   padding: 24px;
+  position: relative;
+  transition: background 0.15s;
+}
+
+.auth-topbar-actions {
+  position: absolute;
+  top: 20px;
+  right: 24px;
 }
 
 .auth-container {
@@ -427,11 +471,11 @@ tr:hover td { background: var(--bg-card-hover); }
 }
 
 .auth-logo {
-  width: 36px; height: 36px;
+  width: 38px; height: 38px;
   background: var(--accent);
-  color: #fff;
+  color: #ffffff;
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   border-radius: var(--radius-md);
   display: inline-flex;
   align-items: center;
@@ -440,9 +484,10 @@ tr:hover td { background: var(--bg-card-hover); }
 }
 
 .auth-header h1 {
-  font-size: 1.25rem;
+  font-size: 1.3rem;
   font-weight: 700;
   color: var(--text-bright);
+  letter-spacing: -0.01em;
 }
 
 .auth-header p {
@@ -456,6 +501,8 @@ tr:hover td { background: var(--bg-card-hover); }
   border: 1px solid var(--border-card);
   border-radius: var(--radius-md);
   padding: 24px;
+  box-shadow: var(--card-shadow);
+  transition: background 0.15s, border-color 0.15s;
 }
 
 .auth-footer-links {
@@ -511,6 +558,7 @@ tr:hover td { background: var(--bg-card-hover); }
   background: var(--bg-card);
   border: 1px solid var(--border-card);
   color: var(--text-primary);
+  box-shadow: var(--card-shadow);
 }
 
 .toast-success { border-color: var(--green); color: var(--green); }
@@ -525,6 +573,13 @@ tr:hover td { background: var(--bg-card-hover); }
 .gap-2 { gap: 8px; }
 .gap-3 { gap: 12px; }
 .gap-4 { gap: 16px; }
+.mt-2 { margin-top: 8px; }
 .mt-4 { margin-top: 16px; }
 .mb-4 { margin-bottom: 16px; }
 .font-mono { font-family: var(--font-mono); }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
+.text-primary { color: var(--text-primary); }
+.text-secondary { color: var(--text-secondary); }
+.text-muted { color: var(--text-muted); }
+.text-bright { color: var(--text-bright); }
