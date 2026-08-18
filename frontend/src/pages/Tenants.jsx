@@ -71,7 +71,7 @@ export function Tenants() {
       </div>
 
       <footer className="app-footer">
-        <div>NexusSaaS Enterprise v1.0.0</div>
+        <div>Multitenant-SaaS Platform v1.0.0</div>
         <div className="flex gap-4">
           <a href="#" onClick={e => e.preventDefault()}>Terms of Service</a>
           <a href="#" onClick={e => e.preventDefault()}>Privacy Policy</a>

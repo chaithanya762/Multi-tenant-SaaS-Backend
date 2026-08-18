@@ -23,7 +23,7 @@ export function Sidebar({ open, setOpen }) {
       <div className="sidebar-brand">
         <div className="brand-logo">N</div>
         <div className="brand-text">
-          <div className="brand-name">NexusSaaS</div>
+          <div className="brand-name">Multitenant-SaaS</div>
           <div className="brand-badge">ENTERPRISE</div>
         </div>
       </div>

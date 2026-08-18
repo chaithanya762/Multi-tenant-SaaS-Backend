@@ -85,7 +85,7 @@ export function AuthScreen() {
       <div className="auth-container">
         <div className="auth-header">
           <div className="auth-logo">N</div>
-          <h1>NexusSaaS Platform</h1>
+          <h1>Multitenant-SaaS Platform</h1>
           <p>{isLogin ? 'Sign in to access your tenant workspace' : 'Register a new tenant administrator'}</p>
         </div>
 
