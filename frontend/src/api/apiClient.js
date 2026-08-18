@@ -1,19 +1,21 @@
 const DEFAULT_RENDER_URL = 'https://multitenant-backend-4lh0.onrender.com';
 
 export const getApiBaseUrl = () => {
-  let customUrl = localStorage.getItem('saas_api_url');
-  // Vercel hosts the frontend static files, not Java Spring Boot backend.
-  // Overwrite if previously pointing to vercel.app
-  if (customUrl && customUrl.includes('vercel.app')) {
-    customUrl = DEFAULT_RENDER_URL;
-    localStorage.setItem('saas_api_url', DEFAULT_RENDER_URL);
+  // If running directly on Render itself, use same-origin relative paths
+  if (typeof window !== 'undefined' && window.location.origin.includes('onrender.com')) {
+    return '';
   }
-  if (customUrl) return customUrl.replace(/\/+$/, '');
-  
-  const envUrl = import.meta.env.VITE_API_BASE_URL;
-  if (envUrl && !envUrl.includes('vercel.app')) return envUrl.replace(/\/+$/, '');
 
-  return DEFAULT_RENDER_URL;
+  let customUrl = typeof localStorage !== 'undefined' ? localStorage.getItem('saas_api_url') : null;
+  // If customUrl is missing, or points to obsolete vercel frontend, reset to Render backend
+  if (!customUrl || customUrl.includes('vercel.app')) {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('saas_api_url', DEFAULT_RENDER_URL);
+    }
+    return DEFAULT_RENDER_URL;
+  }
+
+  return customUrl.replace(/\/+$/, '');
 };
 
 export const createApiClient = (token, tenantId, addToast, handleLogout) => {
@@ -55,8 +57,8 @@ export const createApiClient = (token, tenantId, addToast, handleLogout) => {
       
     } catch (error) {
       if (error.message === 'Failed to fetch' || error.message.includes('NetworkError')) {
-        const targetUrl = getApiBaseUrl();
-        const networkError = `Backend API server at [${targetUrl}] is unreachable. Ensure Render backend is awake or update target URL.`;
+        const targetUrl = getApiBaseUrl() || window.location.origin;
+        const networkError = `Backend API server at [${targetUrl}] is unreachable (502 / Connection Refused). Please ensure your backend is running or specify your Render API URL.`;
         if (addToast) addToast(networkError, 'error');
         throw new Error(networkError);
       }

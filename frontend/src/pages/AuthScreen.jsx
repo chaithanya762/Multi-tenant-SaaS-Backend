@@ -8,7 +8,14 @@ export function AuthScreen() {
   const { login, apiFetch, addToast } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [form, setForm] = useState({ tenantId: 'tenant-alpha', username: 'alpha-admin', email: '', password: 'password123' });
-  const [apiUrl, setApiUrl] = useState(() => getApiBaseUrl());
+  const [apiUrl, setApiUrl] = useState(() => {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('saas_api_url') : null;
+    if (!raw || raw.includes('vercel.app')) {
+      if (typeof localStorage !== 'undefined') localStorage.setItem('saas_api_url', DEFAULT_RENDER_URL);
+      return DEFAULT_RENDER_URL;
+    }
+    return raw;
+  });
   const [showConfig, setShowConfig] = useState(false);
   const [loading, setLoading] = useState(false);
 
