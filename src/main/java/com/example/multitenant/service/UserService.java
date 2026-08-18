@@ -31,6 +31,8 @@ public class UserService {
 
     @Transactional
     public User createUser(String tenantId, String username, String email, String rawPassword, String role) {
+        TenantContext.setTenantId(tenantId);
+        
         // Auto-provision tenant if it does not exist in the database yet
         if (!tenantRepository.existsById(tenantId)) {
             Tenant newTenant = new Tenant(tenantId, tenantId, "ACTIVE");
@@ -54,6 +56,7 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public User authenticate(String tenantId, String username, String rawPassword) {
+        TenantContext.setTenantId(tenantId);
         User user = userRepository.findByTenantIdAndUsername(tenantId, username)
             .orElseThrow(() -> new IllegalArgumentException("Invalid username or password"));
         if (!user.isActive()) {

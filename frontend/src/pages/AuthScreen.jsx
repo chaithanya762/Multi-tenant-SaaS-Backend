@@ -47,6 +47,9 @@ export function AuthScreen() {
 
       const res = await apiFetch(endpoint, {
         method: 'POST',
+        headers: {
+          'X-Tenant-ID': form.tenantId
+        },
         body: JSON.stringify(body)
       });
 

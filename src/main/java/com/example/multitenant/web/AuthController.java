@@ -1,5 +1,6 @@
 package com.example.multitenant.web;
 
+import com.example.multitenant.context.TenantContext;
 import com.example.multitenant.service.AuthService;
 import com.example.multitenant.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -31,31 +32,41 @@ public class AuthController {
     @PostMapping("/login")
     @Operation(summary = "Login with username and password", description = "Returns a JWT access token (15 min) and a refresh token (30 days)")
     public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
-        AuthService.LoginResult result = authService.login(
-            request.getTenantId(), request.getUsername(), request.getPassword());
-        TokenResponse response = new TokenResponse(
-            result.accessToken(),
-            result.refreshToken(),
-            result.user().getTenantId(),
-            result.user().getUsername(),
-            result.user().getRole(),
-            900L
-        );
-        return ResponseEntity.ok(response);
+        try {
+            TenantContext.setTenantId(request.getTenantId());
+            AuthService.LoginResult result = authService.login(
+                request.getTenantId(), request.getUsername(), request.getPassword());
+            TokenResponse response = new TokenResponse(
+                result.accessToken(),
+                result.refreshToken(),
+                result.user().getTenantId(),
+                result.user().getUsername(),
+                result.user().getRole(),
+                900L
+            );
+            return ResponseEntity.ok(response);
+        } finally {
+            TenantContext.clear();
+        }
     }
 
     @PostMapping("/register")
     @Operation(summary = "Register a new user within a tenant")
     public ResponseEntity<Map<String, String>> register(@Valid @RequestBody RegisterRequest request) {
-        userService.createUser(
-            request.getTenantId(),
-            request.getUsername(),
-            request.getEmail(),
-            request.getPassword(),
-            "ROLE_TENANT_USER"
-        );
-        return ResponseEntity.status(HttpStatus.CREATED)
-            .body(Map.of("message", "User registered successfully"));
+        try {
+            TenantContext.setTenantId(request.getTenantId());
+            userService.createUser(
+                request.getTenantId(),
+                request.getUsername(),
+                request.getEmail(),
+                request.getPassword(),
+                "ROLE_TENANT_USER"
+            );
+            return ResponseEntity.status(HttpStatus.CREATED)
+                .body(Map.of("message", "User registered successfully"));
+        } finally {
+            TenantContext.clear();
+        }
     }
 
     @PostMapping("/refresh")
