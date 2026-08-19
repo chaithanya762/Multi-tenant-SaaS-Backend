@@ -599,3 +599,119 @@ tr:hover td { background: var(--bg-card-hover); }
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+
+/* ============================================================
+   Responsive Design — Mobile & Tablet
+   ============================================================ */
+
+/* Tablet: 768px and below */
+@media (max-width: 768px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+  .sidebar {
+    position: fixed;
+    left: -280px;
+    top: 0;
+    bottom: 0;
+    width: 280px;
+    z-index: 1000;
+    transition: left 0.3s ease;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
+  }
+  .sidebar.open {
+    left: 0;
+  }
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+  }
+  .sidebar.open + .sidebar-overlay {
+    display: block;
+  }
+  .topbar .menu-toggle {
+    display: flex;
+  }
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .table-wrap table {
+    min-width: 600px;
+  }
+}
+
+/* Mobile: 480px and below */
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  .stat-card {
+    padding: 1rem;
+  }
+  .stat-value {
+    font-size: 1.5rem;
+  }
+  .card-p {
+    padding: 1rem;
+  }
+  .page-content {
+    padding: 1rem;
+  }
+  .auth-container {
+    padding: 1rem;
+    margin: 1rem;
+  }
+  .auth-card {
+    padding: 1.5rem;
+  }
+  .flex.gap-4 {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .flex.gap-2 {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .topbar {
+    padding: 0.75rem 1rem;
+  }
+  .app-footer {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.5rem;
+  }
+}
+
+/* Ensure hamburger menu button is hidden on desktop */
+.topbar .menu-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  cursor: pointer;
+  font-size: 1.2rem;
+}
+.topbar .menu-toggle:hover {
+  background: var(--nav-hover);
+}
+

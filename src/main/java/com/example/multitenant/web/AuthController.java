@@ -86,7 +86,49 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
     }
 
+    @PostMapping("/forgot-password")
+    @Operation(summary = "Request a password reset token (sent to email)")
+    public ResponseEntity<Map<String, String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        try {
+            TenantContext.setTenantId(request.getTenantId());
+            String resetToken = userService.generatePasswordResetToken(request.getTenantId(), request.getEmail());
+            // In production, send this token via email. For now, return it in response.
+            return ResponseEntity.ok(Map.of(
+                "message", "Password reset token generated. In production, this would be sent via email.",
+                "resetToken", resetToken
+            ));
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    @PostMapping("/reset-password")
+    @Operation(summary = "Reset password using a valid reset token")
+    public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        try {
+            TenantContext.setTenantId(request.getTenantId());
+            userService.resetPassword(request.getTenantId(), request.getEmail(), request.getResetToken(), request.getNewPassword());
+            return ResponseEntity.ok(Map.of("message", "Password reset successfully. Please login with your new password."));
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
     // ---- Request / Response DTOs ----
+
+    @Data
+    public static class ForgotPasswordRequest {
+        @NotBlank private String tenantId;
+        @NotBlank @Email private String email;
+    }
+
+    @Data
+    public static class ResetPasswordRequest {
+        @NotBlank private String tenantId;
+        @NotBlank @Email private String email;
+        @NotBlank private String resetToken;
+        @NotBlank @Size(min = 8, max = 128) private String newPassword;
+    }
 
     @Data
     public static class LoginRequest {

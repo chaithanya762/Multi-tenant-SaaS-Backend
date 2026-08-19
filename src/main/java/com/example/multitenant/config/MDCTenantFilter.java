@@ -20,11 +20,18 @@ public class MDCTenantFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         try {
-            MDC.put("requestId", UUID.randomUUID().toString().substring(0, 8));
+            String requestId = request.getHeader("X-Request-ID");
+            if (requestId == null || requestId.isBlank()) {
+                requestId = java.util.UUID.randomUUID().toString().substring(0, 8);
+            }
+            org.slf4j.MDC.put("requestId", requestId);
+            response.setHeader("X-Request-ID", requestId);
+            
             MDC.put("method", request.getMethod());
             MDC.put("path", request.getRequestURI());
             filterChain.doFilter(request, response);
         } finally {
+            org.slf4j.MDC.remove("requestId");
             MDC.clear();
         }
     }

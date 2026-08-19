@@ -35,6 +35,7 @@ export default function App() {
   return (
     <div className="app-shell">
       <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
+      {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
       
       <main className="main-content">
         <Topbar toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />

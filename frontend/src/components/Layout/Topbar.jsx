@@ -26,6 +26,9 @@ export function Topbar({ toggleSidebar }) {
 
   return (
     <header className="topbar">
+      <button className="menu-toggle" onClick={toggleSidebar} aria-label="Toggle menu">
+        ☰
+      </button>
       <div className="flex items-center gap-3">
         <span className="text-secondary font-semibold" style={{ fontSize: '0.84rem' }}>Console</span>
         <span className="text-muted">/</span>

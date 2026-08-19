@@ -80,4 +80,39 @@ public class UserService {
         user.setActive(false);
         userRepository.save(user);
     }
+
+    private final java.util.concurrent.ConcurrentHashMap<String, PasswordResetEntry> resetTokens = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private record PasswordResetEntry(String token, String tenantId, String email, java.time.Instant expiresAt) {
+        boolean isValid(String checkToken, String checkTenantId, String checkEmail) {
+            return token.equals(checkToken) && tenantId.equals(checkTenantId)
+                && email.equals(checkEmail) && java.time.Instant.now().isBefore(expiresAt);
+        }
+    }
+
+    public String generatePasswordResetToken(String tenantId, String email) {
+        TenantContext.setTenantId(tenantId);
+        User user = userRepository.findByTenantIdAndEmail(tenantId, email)
+            .orElseThrow(() -> new IllegalArgumentException("No account found with email: " + email));
+        String token = java.util.UUID.randomUUID().toString();
+        resetTokens.put(email + ":" + tenantId, new PasswordResetEntry(token, tenantId, email, java.time.Instant.now().plusSeconds(3600)));
+        log.info("Password reset token generated for user '{}' in tenant '{}'", user.getUsername(), tenantId);
+        return token;
+    }
+
+    @Transactional
+    public void resetPassword(String tenantId, String email, String resetToken, String newPassword) {
+        TenantContext.setTenantId(tenantId);
+        String key = email + ":" + tenantId;
+        PasswordResetEntry entry = resetTokens.get(key);
+        if (entry == null || !entry.isValid(resetToken, tenantId, email)) {
+            throw new IllegalArgumentException("Invalid or expired password reset token");
+        }
+        User user = userRepository.findByTenantIdAndEmail(tenantId, email)
+            .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        resetTokens.remove(key);
+        log.info("Password reset completed for user '{}' in tenant '{}'", user.getUsername(), tenantId);
+    }
 }
