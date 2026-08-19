@@ -91,7 +91,7 @@ export function Orders() {
         <div className="mb-4">
           <input 
             className="input" 
-            placeholder="Filter by customer email..." 
+            placeholder="Search by customer email..." 
             value={emailFilter} 
             onChange={e => {
               setEmailFilter(e.target.value);

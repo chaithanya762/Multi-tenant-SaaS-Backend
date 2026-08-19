@@ -25,6 +25,12 @@ public abstract class AbstractTenantEntity {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
+    @Column(name = "created_by", updatable = false)
+    private String createdBy;
+
+    @Column(name = "updated_by")
+    private String updatedBy;
+
     public String getTenantId() { return tenantId; }
     public void setTenantId(String tenantId) { this.tenantId = tenantId; }
     public Instant getCreatedAt() { return createdAt; }
@@ -32,6 +38,11 @@ public abstract class AbstractTenantEntity {
     public Instant getDeletedAt() { return deletedAt; }
     public void setDeletedAt(Instant deletedAt) { this.deletedAt = deletedAt; }
     public boolean isDeleted() { return deletedAt != null; }
+
+    public String getCreatedBy() { return createdBy; }
+    public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
+    public String getUpdatedBy() { return updatedBy; }
+    public void setUpdatedBy(String updatedBy) { this.updatedBy = updatedBy; }
 
     @PrePersist
     public void onPrePersist() {
@@ -43,8 +54,23 @@ public abstract class AbstractTenantEntity {
                 this.tenantId = currentTenant;
             }
         }
+        this.createdBy = resolveCurrentUser();
+        this.updatedBy = this.createdBy;
     }
 
     @PreUpdate
-    public void onPreUpdate() { this.updatedAt = Instant.now(); }
+    public void onPreUpdate() {
+        this.updatedAt = Instant.now();
+        this.updatedBy = resolveCurrentUser();
+    }
+
+    private String resolveCurrentUser() {
+        try {
+            var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
+                return auth.getName();
+            }
+        } catch (Exception ignored) {}
+        return "system";
+    }
 }

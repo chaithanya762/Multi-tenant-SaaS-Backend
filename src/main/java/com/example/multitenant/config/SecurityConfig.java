@@ -45,7 +45,8 @@ public class SecurityConfig {
                 // Public endpoints
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/tenants").permitAll()
-                .requestMatchers("/actuator/**").permitAll()
+                .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                .requestMatchers("/actuator/**").hasRole("SYS_ADMIN")
                 .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/api-docs/**", "/v3/api-docs/**", "/h2-console/**").permitAll()
                 .requestMatchers("/", "/index.html", "/assets/**", "/static/**").permitAll()
                 // Tenant admin routes
@@ -56,7 +57,7 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             .exceptionHandling(e -> e.authenticationEntryPoint(new org.springframework.security.web.authentication.HttpStatusEntryPoint(org.springframework.http.HttpStatus.UNAUTHORIZED)))
-            .headers(headers -> headers.frameOptions(frame -> frame.disable()))
+            .headers(headers -> headers.frameOptions(frame -> frame.deny()))
             .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
             .build();
     }

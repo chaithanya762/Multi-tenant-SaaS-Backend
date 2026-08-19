@@ -12,6 +12,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 import java.util.Map;
@@ -27,12 +28,14 @@ public class OrderController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ROLE_TENANT_ADMIN', 'ROLE_SYS_ADMIN')")
     public ResponseEntity<OrderResponse> createOrder(@Valid @RequestBody CreateOrderRequest request) {
         Order order = orderService.createOrder(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(OrderResponse.fromEntity(order));
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ROLE_TENANT_ADMIN', 'ROLE_TENANT_USER', 'ROLE_SYS_ADMIN')")
     public ResponseEntity<PagedResponse<OrderResponse>> getAllOrders(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
@@ -42,12 +45,14 @@ public class OrderController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ROLE_TENANT_ADMIN', 'ROLE_TENANT_USER', 'ROLE_SYS_ADMIN')")
     public ResponseEntity<OrderResponse> getOrderById(@PathVariable String id) {
         Order order = orderService.getOrderById(id);
         return ResponseEntity.ok(OrderResponse.fromEntity(order));
     }
 
     @GetMapping(params = "email")
+    @PreAuthorize("hasAnyRole('ROLE_TENANT_ADMIN', 'ROLE_TENANT_USER', 'ROLE_SYS_ADMIN')")
     public ResponseEntity<List<OrderResponse>> getOrdersByEmail(@RequestParam String email) {
         List<OrderResponse> orders = orderService.getOrdersByEmail(email).stream()
                 .map(OrderResponse::fromEntity)
@@ -56,6 +61,7 @@ public class OrderController {
     }
 
     @PatchMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('ROLE_TENANT_ADMIN', 'ROLE_SYS_ADMIN')")
     public ResponseEntity<OrderResponse> updateOrderStatus(@PathVariable String id, @RequestBody Map<String, String> body) {
         String status = body.get("status");
         if (status == null || status.isBlank()) {

@@ -28,13 +28,16 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final UserService userService;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final com.example.multitenant.repository.UserRepository userRepository;
 
     public AuthService(JwtTokenProvider jwtTokenProvider,
                        UserService userService,
-                       RefreshTokenRepository refreshTokenRepository) {
+                       RefreshTokenRepository refreshTokenRepository,
+                       com.example.multitenant.repository.UserRepository userRepository) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.userService = userService;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional
@@ -58,7 +61,11 @@ public class AuthService {
         if (!stored.isValid()) {
             throw new IllegalArgumentException("Refresh token is expired or revoked");
         }
-        User user = userService.authenticate(stored.getTenantId(), stored.getUserId(), "");
+        User user = userRepository.findByIdAndTenantId(stored.getUserId(), stored.getTenantId())
+            .orElseThrow(() -> new IllegalArgumentException("User not found for refresh token"));
+        if (!user.isActive()) {
+            throw new IllegalStateException("User account is deactivated");
+        }
         return jwtTokenProvider.generateToken(user.getUsername(), user.getTenantId(), user.getRole());
     }
 

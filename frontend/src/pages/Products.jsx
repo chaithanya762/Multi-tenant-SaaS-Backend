@@ -12,6 +12,7 @@ export function Products() {
   const [totalPages, setTotalPages] = useState(1);
   const [isModalOpen, setModalOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   
   useEffect(() => {
     const load = async () => {
@@ -30,8 +31,8 @@ export function Products() {
   }, [apiFetch, page]);
 
   const filteredProducts = products.filter(p => 
-    p.name?.toLowerCase().includes(search.toLowerCase()) || 
-    String(p.id).toLowerCase().includes(search.toLowerCase())
+    p.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    p.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const columns = [
@@ -87,8 +88,8 @@ export function Products() {
             type="text" 
             className="input" 
             placeholder="Search by product SKU or name..." 
-            value={search} 
-            onChange={e => setSearch(e.target.value)} 
+            value={searchQuery} 
+            onChange={e => setSearchQuery(e.target.value)} 
             style={{ maxWidth: '360px' }}
           />
         </div>

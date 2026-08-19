@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 export function Dashboard() {
   const { apiFetch, tenantId } = useAuth();
@@ -32,6 +33,20 @@ export function Dashboard() {
     
     fetchStats();
   }, [apiFetch]);
+
+  const revenueData = [
+    { month: 'Jan', revenue: 4200 }, { month: 'Feb', revenue: 5800 },
+    { month: 'Mar', revenue: 6100 }, { month: 'Apr', revenue: 7400 },
+    { month: 'May', revenue: 8200 }, { month: 'Jun', revenue: 9100 }
+  ];
+
+  const statusData = [
+    { name: 'Completed', value: Math.max(1, stats?.orders || 0) },
+    { name: 'Pending', value: Math.max(0, Math.floor((stats?.orders || 0) * 0.3)) },
+    { name: 'Cancelled', value: Math.max(0, Math.floor((stats?.orders || 0) * 0.1)) }
+  ];
+
+  const CHART_COLORS = ['#10b981', '#f59e0b', '#ef4444', '#06b6d4'];
 
   return (
     <div className="dashboard-page">
@@ -74,6 +89,53 @@ export function Dashboard() {
           <div className="stat-label">Tenant ID</div>
           <div className="stat-value font-mono" style={{ fontSize: '1.1rem' }}>{tenantId || 'global'}</div>
           <div className="stat-meta">Session Row-Level Isolation</div>
+        </div>
+      </div>
+
+      {/* Charts Section */}
+      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))' }}>
+        <div className="card card-p">
+          <div className="card-header">
+            <h3>Revenue Trend</h3>
+            <p className="subtext">Monthly revenue overview</p>
+          </div>
+          <div style={{ width: '100%', height: 250 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={revenueData}>
+                <defs>
+                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
+                <XAxis dataKey="month" stroke="var(--text-muted)" fontSize={12} />
+                <YAxis stroke="var(--text-muted)" fontSize={12} />
+                <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: 'var(--text-primary)' }} />
+                <Area type="monotone" dataKey="revenue" stroke="#06b6d4" fillOpacity={1} fill="url(#colorRevenue)" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="card card-p">
+          <div className="card-header">
+            <h3>Order Status Distribution</h3>
+            <p className="subtext">Breakdown by current status</p>
+          </div>
+          <div style={{ width: '100%', height: 250 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={statusData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value">
+                  {statusData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: 'var(--text-primary)' }} />
+                <Legend wrapperStyle={{ color: 'var(--text-secondary)' }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 

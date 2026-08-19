@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 
 export function useAuth() {
   const [token, setTokenState] = useState(localStorage.getItem('saas_token') || '');
+  const [refreshToken, setRefreshTokenState] = useState(localStorage.getItem('saas_refresh_token') || '');
   const [tenantId, setTenantIdState] = useState(localStorage.getItem('saas_tenant') || '');
 
   const setToken = useCallback((newToken) => {
@@ -10,6 +11,15 @@ export function useAuth() {
       localStorage.setItem('saas_token', newToken);
     } else {
       localStorage.removeItem('saas_token');
+    }
+  }, []);
+
+  const setRefreshToken = useCallback((newRefresh) => {
+    setRefreshTokenState(newRefresh);
+    if (newRefresh) {
+      localStorage.setItem('saas_refresh_token', newRefresh);
+    } else {
+      localStorage.removeItem('saas_refresh_token');
     }
   }, []);
 
@@ -22,19 +32,23 @@ export function useAuth() {
     }
   }, []);
 
-  const login = useCallback((newToken, newTenantId) => {
+  const login = useCallback((newToken, newRefreshToken, newTenantId) => {
     setToken(newToken);
+    setRefreshToken(newRefreshToken);
     setTenantId(newTenantId);
-  }, [setToken, setTenantId]);
+  }, [setToken, setRefreshToken, setTenantId]);
 
   const logout = useCallback(() => {
     setToken('');
+    setRefreshToken('');
     setTenantId('');
-  }, [setToken, setTenantId]);
+  }, [setToken, setRefreshToken, setTenantId]);
 
   return {
     token,
     setToken,
+    refreshToken,
+    setRefreshToken,
     tenantId,
     setTenantId,
     login,

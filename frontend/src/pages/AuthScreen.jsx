@@ -57,7 +57,7 @@ export function AuthScreen() {
 
       const token = res.accessToken || res.token;
       if (token) {
-        login(token, form.tenantId);
+        login(token, res.refreshToken, form.tenantId);
         addToast(`Welcome, ${form.username}`, 'success');
       } else if (!isLogin) {
         addToast('Registration successful. Please sign in.', 'success');

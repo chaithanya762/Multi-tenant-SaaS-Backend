@@ -70,9 +70,7 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public List<User> getUsersForCurrentTenant() {
-        return userRepository.findAll().stream()
-            .filter(u -> TenantContext.getTenantId().equals(u.getTenantId()))
-            .toList();
+        return userRepository.findByTenantId(TenantContext.getTenantId());
     }
 
     @Transactional

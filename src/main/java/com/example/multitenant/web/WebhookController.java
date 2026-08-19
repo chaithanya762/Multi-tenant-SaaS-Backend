@@ -11,6 +11,7 @@ import lombok.Data;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 import java.util.Map;
@@ -29,6 +30,7 @@ public class WebhookController {
 
     @PostMapping
     @Operation(summary = "Register a webhook endpoint")
+    @PreAuthorize("hasAnyRole('ROLE_TENANT_ADMIN', 'ROLE_SYS_ADMIN')")
     public ResponseEntity<WebhookEndpoint> createWebhook(@Valid @RequestBody CreateWebhookRequest request) {
         WebhookEndpoint endpoint = new WebhookEndpoint(
             UUID.randomUUID().toString(),
@@ -43,6 +45,7 @@ public class WebhookController {
 
     @GetMapping
     @Operation(summary = "List webhook endpoints for the tenant")
+    @PreAuthorize("hasAnyRole('ROLE_TENANT_ADMIN', 'ROLE_SYS_ADMIN')")
     public ResponseEntity<List<WebhookEndpoint>> listWebhooks() {
         return ResponseEntity.ok(
             webhookEndpointRepository.findByTenantIdAndActiveTrue(TenantContext.getTenantId()));
@@ -50,6 +53,7 @@ public class WebhookController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Deactivate a webhook endpoint")
+    @PreAuthorize("hasAnyRole('ROLE_TENANT_ADMIN', 'ROLE_SYS_ADMIN')")
     public ResponseEntity<Map<String, String>> deleteWebhook(@PathVariable String id) {
         webhookEndpointRepository.findById(id).ifPresent(ep -> {
             ep.setActive(false);

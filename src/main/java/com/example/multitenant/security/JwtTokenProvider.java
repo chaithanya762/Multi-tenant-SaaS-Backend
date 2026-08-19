@@ -28,12 +28,12 @@ public class JwtTokenProvider {
     @PostConstruct
     void validateSecretKey() {
         if (secretKeyString == null || secretKeyString.isBlank()) {
-            secretKeyString = "MultiTenantSaaSSecretKey2026SuperSecureEnterpriseKeyForJWT99xyzABC_MultiTenantSaaSSecretKey2026";
-            log.warn("JWT_SECRET environment variable not provided. Falling back to default secure 64-character secret key.");
-        } else if (secretKeyString.length() < 64) {
-            secretKeyString = (secretKeyString + "MultiTenantSaaSSecretKey2026SuperSecureEnterpriseKeyForJWT99xyzABC_MultiTenantSaaSSecretKey2026").substring(0, 64);
-            log.warn("JWT_SECRET was under 64 characters. Auto-padded to 64 characters for HMAC-SHA512 compliance.");
+            throw new IllegalStateException("FATAL: jwt.secret is not configured. Set the JWT_SECRET environment variable (minimum 64 characters).");
         }
+        if (secretKeyString.length() < 64) {
+            throw new IllegalStateException("FATAL: jwt.secret must be at least 64 characters for HMAC-SHA512. Current length: " + secretKeyString.length());
+        }
+        log.info("JWT secret key validated successfully ({} characters)", secretKeyString.length());
     }
 
     private SecretKey getKey() {

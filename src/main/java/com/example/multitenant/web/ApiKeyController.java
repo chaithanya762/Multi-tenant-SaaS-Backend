@@ -10,6 +10,7 @@ import lombok.Data;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 import java.util.Map;
@@ -27,6 +28,7 @@ public class ApiKeyController {
 
     @PostMapping
     @Operation(summary = "Create a new API key (raw key shown ONCE only)")
+    @PreAuthorize("hasAnyRole('ROLE_TENANT_ADMIN', 'ROLE_SYS_ADMIN')")
     public ResponseEntity<Map<String, Object>> createApiKey(@Valid @RequestBody CreateApiKeyRequest request) {
         ApiKeyService.ApiKeyCreationResult result = apiKeyService.createApiKey(request.getName(), request.getScopes());
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
@@ -40,12 +42,14 @@ public class ApiKeyController {
 
     @GetMapping
     @Operation(summary = "List all active API keys for the tenant")
+    @PreAuthorize("hasAnyRole('ROLE_TENANT_ADMIN', 'ROLE_SYS_ADMIN')")
     public ResponseEntity<List<ApiKey>> listApiKeys() {
         return ResponseEntity.ok(apiKeyService.listApiKeys());
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Revoke an API key")
+    @PreAuthorize("hasAnyRole('ROLE_TENANT_ADMIN', 'ROLE_SYS_ADMIN')")
     public ResponseEntity<Map<String, String>> revokeApiKey(@PathVariable String id) {
         apiKeyService.revokeApiKey(id);
         return ResponseEntity.ok(Map.of("message", "API key revoked"));

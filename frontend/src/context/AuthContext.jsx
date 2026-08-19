@@ -17,11 +17,13 @@ export function AuthProvider({ children }) {
   const apiFetch = useMemo(() => {
     return createApiClient(
       auth.token,
+      auth.refreshToken,
       auth.tenantId,
       toast.addToast,
-      handleLogout
+      handleLogout,
+      auth.setToken
     );
-  }, [auth.token, auth.tenantId, toast.addToast]);
+  }, [auth.token, auth.refreshToken, auth.tenantId, toast.addToast]);
 
   const value = {
     ...auth,

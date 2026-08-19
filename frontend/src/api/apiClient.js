@@ -1,37 +1,77 @@
 const DEFAULT_RENDER_URL = 'https://multitenant-backend-4lh0.onrender.com';
 
 export const getApiBaseUrl = () => {
-  // If running directly on Render itself, use same-origin relative paths
   if (typeof window !== 'undefined' && window.location.origin.includes('onrender.com')) {
     return '';
   }
-
   let customUrl = typeof localStorage !== 'undefined' ? localStorage.getItem('saas_api_url') : null;
-  // If customUrl is missing, or points to obsolete vercel frontend, reset to Render backend
   if (!customUrl || customUrl.includes('vercel.app')) {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('saas_api_url', DEFAULT_RENDER_URL);
     }
     return DEFAULT_RENDER_URL;
   }
-
   return customUrl.replace(/\/+$/, '');
 };
 
-export const createApiClient = (token, tenantId, addToast, handleLogout) => {
+let isRefreshing = false;
+let refreshPromise = null;
+
+export const createApiClient = (token, refreshToken, tenantId, addToast, handleLogout, setToken) => {
+  
+  const attemptRefresh = async () => {
+    if (isRefreshing) return refreshPromise;
+    if (!refreshToken) return null;
+    
+    isRefreshing = true;
+    refreshPromise = (async () => {
+      try {
+        const baseUrl = getApiBaseUrl();
+        const res = await fetch(`${baseUrl}/api/v1/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken })
+        });
+        if (!res.ok) return null;
+        const data = await res.json();
+        if (data.accessToken) {
+          if (setToken) setToken(data.accessToken);
+          return data.accessToken;
+        }
+        return null;
+      } catch {
+        return null;
+      } finally {
+        isRefreshing = false;
+        refreshPromise = null;
+      }
+    })();
+    return refreshPromise;
+  };
+
   return async (endpoint, options = {}) => {
-    try {
+    const makeRequest = async (authToken) => {
       const headers = {
         'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` }),
+        ...(authToken && { 'Authorization': `Bearer ${authToken}` }),
         ...(tenantId && { 'X-Tenant-ID': tenantId }),
         ...(options.headers || {})
       };
-
       const baseUrl = getApiBaseUrl();
       const url = `${baseUrl}/api${endpoint}`;
+      return fetch(url, { ...options, headers });
+    };
 
-      const response = await fetch(url, { ...options, headers });
+    try {
+      let response = await makeRequest(token);
+      
+      // On 401, attempt token refresh before giving up
+      if (response.status === 401 && refreshToken) {
+        const newToken = await attemptRefresh();
+        if (newToken) {
+          response = await makeRequest(newToken);
+        }
+      }
       
       if (response.status === 401) {
         if (handleLogout) handleLogout();
@@ -51,10 +91,8 @@ export const createApiClient = (token, tenantId, addToast, handleLogout) => {
         } catch (_) {}
         throw new Error(errorMsg);
       }
-
       const text = await response.text();
       return text ? JSON.parse(text) : {};
-      
     } catch (error) {
       if (error.message === 'Failed to fetch' || error.message.includes('NetworkError')) {
         const targetUrl = getApiBaseUrl() || window.location.origin;

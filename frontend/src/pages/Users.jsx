@@ -11,6 +11,8 @@ export function Users() {
   const [userToDeactivate, setUserToDeactivate] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
+  const [searchQuery, setSearchQuery] = useState('');
+
   const loadUsers = async () => {
     setLoading(true);
     try {
@@ -45,6 +47,11 @@ export function Users() {
     }
   };
 
+  const filteredUsers = users.filter(u => 
+    u.username?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    u.email?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   const columns = [
     { key: 'username', label: 'Username', render: (row) => <strong style={{ color: 'var(--text-bright)' }}>{row.username}</strong> },
     { key: 'email', label: 'Email Address', render: (row) => <span className="text-secondary">{row.email}</span> },
@@ -76,7 +83,16 @@ export function Users() {
       </div>
 
       <div className="card card-p">
-        <DataTable columns={columns} data={users} loading={loading} />
+        <div className="mb-4">
+          <input 
+            className="input" 
+            placeholder="Search by username or email..." 
+            value={searchQuery} 
+            onChange={e => setSearchQuery(e.target.value)} 
+            style={{ maxWidth: '360px' }}
+          />
+        </div>
+        <DataTable columns={columns} data={filteredUsers} loading={loading} />
       </div>
 
       <CreateUserModal 
