@@ -49,10 +49,12 @@ public class ApiKeyService {
 
     @Transactional
     public void revokeApiKey(String id) {
-        ApiKey key = apiKeyRepository.findById(id)
+        String tenantId = TenantContext.getTenantId();
+        ApiKey key = apiKeyRepository.findByIdAndTenantId(id, tenantId)
             .orElseThrow(() -> new IllegalArgumentException("API key not found: " + id));
         key.setActive(false);
         apiKeyRepository.save(key);
+        log.info("Revoked API key '{}' in tenant '{}'", key.getName(), tenantId);
     }
 
     public ApiKey validateApiKey(String rawKey) {

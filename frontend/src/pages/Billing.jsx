@@ -10,7 +10,7 @@ export function Billing() {
     const fetchBilling = async () => {
       setLoading(true);
       try {
-        const res = await apiFetch('/v1/billing');
+        const res = await apiFetch('/v1/billing/usage');
         setBilling(res);
       } catch (e) {
         setBilling(null);
@@ -36,13 +36,13 @@ export function Billing() {
 
         <div className="stat-card">
           <div className="stat-label">Recorded API Usage</div>
-          <div className="stat-value">{loading ? '...' : (billing?.apiCalls ? billing.apiCalls.toLocaleString() : '0')}</div>
+          <div className="stat-value">{loading ? '...' : (billing?.api_calls ? billing.api_calls.toLocaleString() : '0')}</div>
         </div>
 
         <div className="stat-card">
-          <div className="stat-label">Current Cycle Charge</div>
+          <div className="stat-label">Orders This Cycle</div>
           <div className="stat-value font-mono">
-            ${billing?.currentCycleCost ? Number(billing.currentCycleCost).toFixed(2) : '0.00'}
+            {loading ? '...' : (billing?.orders_created ?? 0)}
           </div>
         </div>
       </div>

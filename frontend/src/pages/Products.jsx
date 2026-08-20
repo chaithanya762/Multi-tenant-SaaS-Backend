@@ -11,7 +11,7 @@ export function Products() {
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [isModalOpen, setModalOpen] = useState(false);
-  const [search, setSearch] = useState('');
+
   const [searchQuery, setSearchQuery] = useState('');
   
   useEffect(() => {

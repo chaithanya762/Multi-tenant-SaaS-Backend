@@ -6,7 +6,7 @@ export function Webhooks() {
   const { apiFetch, addToast } = useAuth();
   const [webhooks, setWebhooks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [newHook, setNewHook] = useState({ url: '', events: 'order.created' });
+  const [newHook, setNewHook] = useState({ url: '', events: 'order.created', secret: '' });
 
   useEffect(() => {
     const fetchWebhooks = async () => {
@@ -32,7 +32,7 @@ export function Webhooks() {
       });
       setWebhooks([...webhooks, res]);
       addToast('Webhook endpoint registered', 'success');
-      setNewHook({ url: '', events: 'order.created' });
+      setNewHook({ url: '', events: 'order.created', secret: '' });
     } catch (err) {
       addToast('Failed to register webhook: ' + err.message, 'error');
     }
@@ -73,6 +73,16 @@ export function Webhooks() {
               placeholder="order.created" 
               value={newHook.events} 
               onChange={e => setNewHook({...newHook, events: e.target.value})} 
+            />
+          </div>
+          <div className="form-group" style={{ flex: '1 1 180px' }}>
+            <label>Signing Secret</label>
+            <input 
+              required 
+              className="input" 
+              placeholder="whsec_..." 
+              value={newHook.secret} 
+              onChange={e => setNewHook({...newHook, secret: e.target.value})} 
             />
           </div>
           <button type="submit" className="btn btn-primary" style={{ marginTop: '22px' }}>Register Webhook</button>

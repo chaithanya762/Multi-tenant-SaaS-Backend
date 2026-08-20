@@ -31,7 +31,7 @@ export function ApiKeys() {
         method: 'POST',
         body: JSON.stringify({ name: newKeyName })
       });
-      setNewKey(res.token || res.key || 'ak_live_secret_key_generated');
+      setNewKey(res.raw_key || res.token || res.key);
       setKeys([...keys, res]);
       addToast('API Key generated successfully', 'success');
       setNewKeyName('');

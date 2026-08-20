@@ -38,8 +38,11 @@ export function Tenants() {
   const columns = [
     { key: 'id', label: 'Tenant ID', render: (row) => <code className="code-tag">{row.id}</code> },
     { key: 'name', label: 'Display Name', render: (row) => <strong style={{ color: 'var(--text-bright)' }}>{row.name}</strong> },
-    { key: 'plan', label: 'Plan', render: (row) => <span className="badge badge-blue">{row.plan || 'ENTERPRISE'}</span> },
-    { key: 'status', label: 'Status', render: () => <span className="badge badge-green">Active</span> }
+    { key: 'planId', label: 'Plan', render: (row) => <span className="badge badge-blue">{row.planId || 'plan-free'}</span> },
+    { key: 'status', label: 'Status', render: (row) => {
+      const statusClass = row.status === 'ACTIVE' ? 'badge-green' : row.status === 'SUSPENDED' ? 'badge-red' : 'badge-blue';
+      return <span className={`badge ${statusClass}`}>{row.status || 'ACTIVE'}</span>;
+    }}
   ];
 
   return (

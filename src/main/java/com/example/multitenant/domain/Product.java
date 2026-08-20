@@ -7,8 +7,11 @@ import jakarta.persistence.Table;
 
 import java.math.BigDecimal;
 
+import org.hibernate.annotations.SQLRestriction;
+
 @Entity
 @Table(name = "products")
+@SQLRestriction("deleted_at IS NULL")
 public class Product extends AbstractTenantEntity {
 
     @Id

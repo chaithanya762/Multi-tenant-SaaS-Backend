@@ -75,10 +75,12 @@ public class UserService {
 
     @Transactional
     public void deactivateUser(String userId) {
-        User user = userRepository.findById(userId)
+        String tenantId = TenantContext.getTenantId();
+        User user = userRepository.findByIdAndTenantId(userId, tenantId)
             .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
         user.setActive(false);
         userRepository.save(user);
+        log.info("Deactivated user '{}' in tenant '{}'", user.getUsername(), tenantId);
     }
 
     private final java.util.concurrent.ConcurrentHashMap<String, PasswordResetEntry> resetTokens = new java.util.concurrent.ConcurrentHashMap<>();

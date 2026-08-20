@@ -46,4 +46,37 @@ public class TenantService {
         return tenantRepository.findById(id)
                 .orElseThrow(() -> new TenantNotFoundException(id));
     }
+
+    @Transactional
+    public Tenant suspendTenant(String id, String reason) {
+        Tenant tenant = getTenantById(id);
+        tenant.setStatus("SUSPENDED");
+        tenant.setSuspendedAt(java.time.Instant.now());
+        tenant.setSuspensionReason(reason);
+        return tenantRepository.save(tenant);
+    }
+
+    @Transactional
+    public Tenant reactivateTenant(String id) {
+        Tenant tenant = getTenantById(id);
+        tenant.setStatus("ACTIVE");
+        tenant.setSuspendedAt(null);
+        tenant.setSuspensionReason(null);
+        return tenantRepository.save(tenant);
+    }
+
+    @Transactional
+    public void softDeleteTenant(String id) {
+        Tenant tenant = getTenantById(id);
+        tenant.setStatus("DELETED");
+        tenant.setDeletedAt(java.time.Instant.now());
+        tenantRepository.save(tenant);
+    }
+
+    @Transactional
+    public Tenant updatePlan(String id, String planId) {
+        Tenant tenant = getTenantById(id);
+        tenant.setPlanId(planId);
+        return tenantRepository.save(tenant);
+    }
 }

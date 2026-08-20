@@ -11,6 +11,7 @@ import java.util.Optional;
 
 @Repository
 public interface ApiKeyRepository extends JpaRepository<ApiKey, String> {
+    Optional<ApiKey> findByIdAndTenantId(String id, String tenantId);
     Optional<ApiKey> findByKeyHashAndActiveTrue(String keyHash);
     List<ApiKey> findByTenantIdAndActiveTrue(String tenantId);
 }

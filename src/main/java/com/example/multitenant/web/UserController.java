@@ -29,7 +29,7 @@ public class UserController {
         return ResponseEntity.ok(userService.getUsersForCurrentTenant());
     }
 
-    @DeleteMapping("/{userId}/deactivate")
+    @PostMapping("/{userId}/deactivate")
     @PreAuthorize("hasAnyRole('ROLE_TENANT_ADMIN', 'ROLE_SYS_ADMIN')")
     @Operation(summary = "Deactivate a user")
     public ResponseEntity<Map<String, String>> deactivateUser(@PathVariable String userId) {

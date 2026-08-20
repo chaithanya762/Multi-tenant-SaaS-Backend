@@ -55,10 +55,11 @@ public class WebhookController {
     @Operation(summary = "Deactivate a webhook endpoint")
     @PreAuthorize("hasAnyRole('ROLE_TENANT_ADMIN', 'ROLE_SYS_ADMIN')")
     public ResponseEntity<Map<String, String>> deleteWebhook(@PathVariable String id) {
-        webhookEndpointRepository.findById(id).ifPresent(ep -> {
-            ep.setActive(false);
-            webhookEndpointRepository.save(ep);
-        });
+        String tenantId = TenantContext.getTenantId();
+        WebhookEndpoint ep = webhookEndpointRepository.findByIdAndTenantId(id, tenantId)
+            .orElseThrow(() -> new IllegalArgumentException("Webhook not found: " + id));
+        ep.setActive(false);
+        webhookEndpointRepository.save(ep);
         return ResponseEntity.ok(Map.of("message", "Webhook endpoint deactivated"));
     }
 

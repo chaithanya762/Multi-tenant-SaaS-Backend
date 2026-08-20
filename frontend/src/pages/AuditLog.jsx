@@ -24,9 +24,9 @@ export function AuditLog() {
 
   const columns = [
     { key: 'action', label: 'Action Event', render: (row) => <strong style={{ color: 'var(--text-bright)' }}>{row.action}</strong> },
-    { key: 'resource', label: 'Target Resource', render: (row) => <code className="code-tag">{row.resource || row.entityName || 'System'}</code> },
-    { key: 'user', label: 'Performed By', render: (row) => <span className="text-secondary">{row.user || row.performedBy || 'admin'}</span> },
-    { key: 'timestamp', label: 'Timestamp', render: (row) => <span className="text-muted font-mono">{row.timestamp ? new Date(row.timestamp).toLocaleString() : 'Just now'}</span> }
+    { key: 'resourceType', label: 'Target Resource', render: (row) => <code className="code-tag">{row.resourceType ? `${row.resourceType}:${row.resourceId || ''}` : 'System'}</code> },
+    { key: 'username', label: 'Performed By', render: (row) => <span className="text-secondary">{row.username || 'system'}</span> },
+    { key: 'occurredAt', label: 'Timestamp', render: (row) => <span className="text-muted font-mono">{row.occurredAt ? new Date(row.occurredAt).toLocaleString() : 'Just now'}</span> }
   ];
 
   return (
