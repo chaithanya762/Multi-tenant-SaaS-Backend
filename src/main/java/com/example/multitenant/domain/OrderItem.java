@@ -3,8 +3,11 @@ package com.example.multitenant.domain;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 
+import org.hibernate.annotations.SQLRestriction;
+
 @Entity
 @Table(name = "order_items")
+@SQLRestriction("deleted_at IS NULL")
 public class OrderItem extends AbstractTenantEntity {
 
     @Id
