@@ -62,7 +62,7 @@ public class ExportService {
         StringBuilder sb = new StringBuilder();
         sb.append("ID,Action,Resource Type,Resource ID,Username,Occurred At\n");
         for (AuditLog log : logs) {
-            sb.append(escapeCsv(log.getId())).append(",")
+            sb.append(escapeCsv(String.valueOf(log.getId()))).append(",")
               .append(escapeCsv(log.getAction())).append(",")
               .append(escapeCsv(log.getResourceType())).append(",")
               .append(escapeCsv(log.getResourceId())).append(",")

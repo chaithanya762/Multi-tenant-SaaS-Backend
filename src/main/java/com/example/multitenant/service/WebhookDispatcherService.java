@@ -58,8 +58,8 @@ public class WebhookDispatcherService {
             ));
 
             for (WebhookEndpoint endpoint : endpoints) {
-                if (endpoint.getSubscribedEvents() != null &&
-                        (endpoint.getSubscribedEvents().contains(eventType) || endpoint.getSubscribedEvents().contains("*"))) {
+                if (endpoint.getEvents() != null &&
+                        (endpoint.getEvents().contains(eventType) || endpoint.getEvents().contains("*"))) {
                     deliverWebhook(endpoint, eventType, jsonPayload);
                 }
             }
