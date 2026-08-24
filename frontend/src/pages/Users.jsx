@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { DataTable } from '../components/ui/DataTable';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { CreateUserModal } from '../components/modals/CreateUserModal';
+import { InviteUserModal } from '../components/modals/InviteUserModal';
 
 export function Users() {
   const { apiFetch, addToast } = useAuth();
@@ -10,6 +11,7 @@ export function Users() {
   const [loading, setLoading] = useState(true);
   const [userToDeactivate, setUserToDeactivate] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -77,9 +79,14 @@ export function Users() {
           <h1>Team & Access Control</h1>
           <p>Manage tenant members, security roles, and active status.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
-          + Add Member
-        </button>
+        <div className="flex gap-2">
+          <button className="btn btn-outline" onClick={() => setIsInviteModalOpen(true)}>
+            Invite Member
+          </button>
+          <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
+            + Add Member
+          </button>
+        </div>
       </div>
 
       <div className="card card-p">
@@ -99,6 +106,11 @@ export function Users() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onUserCreated={handleUserCreated}
+      />
+
+      <InviteUserModal
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
       />
 
       <ConfirmDialog 

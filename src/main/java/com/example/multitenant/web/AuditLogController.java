@@ -18,9 +18,22 @@ import org.springframework.security.access.prepost.PreAuthorize;
 public class AuditLogController {
 
     private final AuditService auditService;
+    private final com.example.multitenant.service.ExportService exportService;
 
-    public AuditLogController(AuditService auditService) {
+    public AuditLogController(AuditService auditService, com.example.multitenant.service.ExportService exportService) {
         this.auditService = auditService;
+        this.exportService = exportService;
+    }
+
+    @GetMapping(value = "/export", produces = "text/csv")
+    @Operation(summary = "Export tenant audit log as CSV")
+    @PreAuthorize("hasAnyRole('ROLE_TENANT_ADMIN', 'ROLE_SYS_ADMIN')")
+    public ResponseEntity<byte[]> exportAuditLogsCsv() {
+        byte[] csvData = exportService.exportAuditLogsCsv();
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=audit-logs.csv")
+                .header("Content-Type", "text/csv")
+                .body(csvData);
     }
 
     @GetMapping

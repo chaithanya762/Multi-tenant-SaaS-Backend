@@ -22,11 +22,14 @@ public class UserService {
     private final UserRepository userRepository;
     private final TenantRepository tenantRepository;
     private final PasswordEncoder passwordEncoder;
+    private final com.example.multitenant.repository.UserInvitationRepository invitationRepository;
 
-    public UserService(UserRepository userRepository, TenantRepository tenantRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, TenantRepository tenantRepository, PasswordEncoder passwordEncoder,
+                       com.example.multitenant.repository.UserInvitationRepository invitationRepository) {
         this.userRepository = userRepository;
         this.tenantRepository = tenantRepository;
         this.passwordEncoder = passwordEncoder;
+        this.invitationRepository = invitationRepository;
     }
 
     @Transactional
@@ -116,5 +119,38 @@ public class UserService {
         userRepository.save(user);
         resetTokens.remove(key);
         log.info("Password reset completed for user '{}' in tenant '{}'", user.getUsername(), tenantId);
+    }
+
+    @Transactional
+    public com.example.multitenant.domain.UserInvitation createInvitation(String email, String role) {
+        String tenantId = TenantContext.getTenantId();
+        String token = UUID.randomUUID().toString().replace("-", "");
+        com.example.multitenant.domain.UserInvitation invite = new com.example.multitenant.domain.UserInvitation(
+                UUID.randomUUID().toString(),
+                email,
+                role != null ? role : "ROLE_TENANT_USER",
+                token,
+                java.time.Instant.now().plus(48, java.time.temporal.ChronoUnit.HOURS)
+        );
+        invite.setTenantId(tenantId);
+        return invitationRepository.save(invite);
+    }
+
+    @Transactional
+    public User acceptInvitation(String token, String username, String password) {
+        com.example.multitenant.domain.UserInvitation invite = invitationRepository.findByToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid invitation token"));
+        if (invite.isExpired()) {
+            throw new IllegalArgumentException("Invitation token has expired");
+        }
+        if (invite.isAccepted()) {
+            throw new IllegalArgumentException("Invitation token has already been accepted");
+        }
+
+        TenantContext.setTenantId(invite.getTenantId());
+        User user = createUser(invite.getTenantId(), username, invite.getEmail(), password, invite.getRole());
+        invite.setAcceptedAt(java.time.Instant.now());
+        invitationRepository.save(invite);
+        return user;
     }
 }

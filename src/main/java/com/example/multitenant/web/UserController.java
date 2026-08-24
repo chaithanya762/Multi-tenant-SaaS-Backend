@@ -36,4 +36,16 @@ public class UserController {
         userService.deactivateUser(userId);
         return ResponseEntity.ok(Map.of("message", "User deactivated"));
     }
+
+    @PostMapping("/invite")
+    @PreAuthorize("hasAnyRole('ROLE_TENANT_ADMIN', 'ROLE_SYS_ADMIN')")
+    @Operation(summary = "Invite a new team member")
+    public ResponseEntity<com.example.multitenant.domain.UserInvitation> inviteUser(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        String role = body.getOrDefault("role", "ROLE_TENANT_USER");
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException("email is required");
+        }
+        return ResponseEntity.ok(userService.createInvitation(email, role));
+    }
 }

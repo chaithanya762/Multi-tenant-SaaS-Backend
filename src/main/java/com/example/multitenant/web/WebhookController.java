@@ -23,9 +23,15 @@ import java.util.UUID;
 public class WebhookController {
 
     private final WebhookEndpointRepository webhookEndpointRepository;
+    private final com.example.multitenant.repository.WebhookDeliveryRepository webhookDeliveryRepository;
+    private final com.example.multitenant.service.WebhookDispatcherService webhookDispatcherService;
 
-    public WebhookController(WebhookEndpointRepository webhookEndpointRepository) {
+    public WebhookController(WebhookEndpointRepository webhookEndpointRepository,
+                             com.example.multitenant.repository.WebhookDeliveryRepository webhookDeliveryRepository,
+                             com.example.multitenant.service.WebhookDispatcherService webhookDispatcherService) {
         this.webhookEndpointRepository = webhookEndpointRepository;
+        this.webhookDeliveryRepository = webhookDeliveryRepository;
+        this.webhookDispatcherService = webhookDispatcherService;
     }
 
     @PostMapping
@@ -49,6 +55,21 @@ public class WebhookController {
     public ResponseEntity<List<WebhookEndpoint>> listWebhooks() {
         return ResponseEntity.ok(
             webhookEndpointRepository.findByTenantIdAndActiveTrue(TenantContext.getTenantId()));
+    }
+
+    @PostMapping("/{id}/test")
+    @Operation(summary = "Send a test ping event to the webhook")
+    @PreAuthorize("hasAnyRole('ROLE_TENANT_ADMIN', 'ROLE_SYS_ADMIN')")
+    public ResponseEntity<com.example.multitenant.domain.WebhookDelivery> sendTestWebhook(@PathVariable String id) {
+        return ResponseEntity.ok(webhookDispatcherService.sendTestEvent(id));
+    }
+
+    @GetMapping("/{id}/deliveries")
+    @Operation(summary = "Get delivery history logs for a webhook endpoint")
+    @PreAuthorize("hasAnyRole('ROLE_TENANT_ADMIN', 'ROLE_SYS_ADMIN')")
+    public ResponseEntity<List<com.example.multitenant.domain.WebhookDelivery>> getWebhookDeliveries(@PathVariable String id) {
+        String tenantId = TenantContext.getTenantId();
+        return ResponseEntity.ok(webhookDeliveryRepository.findByTenantIdAndWebhookIdOrderByCreatedAtDesc(tenantId, id));
     }
 
     @DeleteMapping("/{id}")

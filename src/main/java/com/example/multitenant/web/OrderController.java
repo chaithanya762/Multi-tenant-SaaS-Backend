@@ -22,9 +22,21 @@ import java.util.Map;
 public class OrderController {
 
     private final OrderService orderService;
+    private final com.example.multitenant.service.ExportService exportService;
 
-    public OrderController(OrderService orderService) {
+    public OrderController(OrderService orderService, com.example.multitenant.service.ExportService exportService) {
         this.orderService = orderService;
+        this.exportService = exportService;
+    }
+
+    @GetMapping(value = "/export", produces = "text/csv")
+    @PreAuthorize("hasAnyRole('ROLE_TENANT_ADMIN', 'ROLE_TENANT_USER', 'ROLE_SYS_ADMIN')")
+    public ResponseEntity<byte[]> exportOrdersCsv() {
+        byte[] csvData = exportService.exportOrdersCsv();
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=orders.csv")
+                .header("Content-Type", "text/csv")
+                .body(csvData);
     }
 
     @PostMapping

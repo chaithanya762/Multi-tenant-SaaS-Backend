@@ -26,11 +26,14 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final TenantRepository tenantRepository;
     private final SubscriptionPlanRepository planRepository;
+    private final WebhookDispatcherService webhookDispatcherService;
 
-    public OrderService(OrderRepository orderRepository, TenantRepository tenantRepository, SubscriptionPlanRepository planRepository) {
+    public OrderService(OrderRepository orderRepository, TenantRepository tenantRepository,
+                        SubscriptionPlanRepository planRepository, WebhookDispatcherService webhookDispatcherService) {
         this.orderRepository = orderRepository;
         this.tenantRepository = tenantRepository;
         this.planRepository = planRepository;
+        this.webhookDispatcherService = webhookDispatcherService;
     }
 
     @Transactional
@@ -65,7 +68,9 @@ public class OrderService {
 
         Order order = new Order(id, request.getCustomerEmail(), request.getTotalAmount(), status);
         order.setTenantId(tenantId);
-        return orderRepository.save(order);
+        Order saved = orderRepository.save(order);
+        webhookDispatcherService.dispatchEvent(tenantId, "order.created", saved);
+        return saved;
     }
 
     @Transactional(readOnly = true)
@@ -111,6 +116,8 @@ public class OrderService {
         }
 
         order.setStatus(newStatus);
-        return orderRepository.save(order);
+        Order updated = orderRepository.save(order);
+        webhookDispatcherService.dispatchEvent(order.getTenantId(), "order.status_updated", updated);
+        return updated;
     }
 }

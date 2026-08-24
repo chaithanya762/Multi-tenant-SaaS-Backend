@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { DataTable } from '../components/ui/DataTable';
+import WebhookDeliveriesModal from '../components/modals/WebhookDeliveriesModal';
 
 export function Webhooks() {
   const { apiFetch, addToast } = useAuth();
@@ -38,10 +39,35 @@ export function Webhooks() {
     }
   };
 
+  const [selectedWebhookId, setSelectedWebhookId] = useState(null);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+
+  const handleTestWebhook = async (id) => {
+    try {
+      const start = Date.now();
+      const res = await apiFetch(`/v1/webhooks/${id}/test`, { method: 'POST' });
+      const latency = Date.now() - start;
+      addToast(`Webhook test successful. Status: ${res?.status || 200}, Latency: ${latency}ms`, 'success');
+    } catch (err) {
+      addToast(`Webhook test failed: ${err.message}`, 'error');
+    }
+  };
+
+  const handleViewHistory = (id) => {
+    setSelectedWebhookId(id);
+    setShowHistoryModal(true);
+  };
+
   const columns = [
     { key: 'url', label: 'Endpoint URL', render: (row) => <code className="code-tag">{row.url}</code> },
     { key: 'events', label: 'Subscribed Events', render: (row) => <span className="badge badge-blue">{row.events}</span> },
-    { key: 'status', label: 'Status', render: () => <span className="badge badge-green">Active</span> }
+    { key: 'status', label: 'Status', render: () => <span className="badge badge-green">Active</span> },
+    { key: 'actions', label: 'Actions', render: (row) => (
+      <div className="flex gap-2">
+         <button className="btn btn-outline btn-sm" onClick={() => handleTestWebhook(row.id)}>Test Webhook</button>
+         <button className="btn btn-outline btn-sm" onClick={() => handleViewHistory(row.id)}>Delivery History</button>
+      </div>
+    )}
   ];
 
   return (
@@ -102,6 +128,12 @@ export function Webhooks() {
           <a href="#" onClick={e => e.preventDefault()}>API Documentation</a>
         </div>
       </footer>
+      {showHistoryModal && (
+        <WebhookDeliveriesModal 
+          webhookId={selectedWebhookId} 
+          onClose={() => setShowHistoryModal(false)} 
+        />
+      )}
     </div>
   );
 }

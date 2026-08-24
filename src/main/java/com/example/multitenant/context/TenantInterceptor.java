@@ -36,7 +36,8 @@ public class TenantInterceptor implements HandlerInterceptor {
             "/api/v1/webhooks",
             "/api/v1/audit-log",
             "/api/v1/billing",
-            "/api/v1/users"
+            "/api/v1/users",
+            "/api/v1/tenants/current"
     );
 
     @Override

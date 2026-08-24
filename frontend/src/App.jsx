@@ -18,6 +18,8 @@ import { AuditLog } from './pages/AuditLog';
 import { Billing } from './pages/Billing';
 import { Webhooks } from './pages/Webhooks';
 import { RlsTester } from './pages/RlsTester';
+import { Settings } from './pages/Settings';
+import { AcceptInvite } from './pages/AcceptInvite';
 
 export default function App() {
   const { isAuthenticated } = useAuth();
@@ -26,7 +28,10 @@ export default function App() {
   if (!isAuthenticated) {
     return (
       <>
-        <AuthScreen />
+        <Routes>
+          <Route path="/accept-invite" element={<AcceptInvite />} />
+          <Route path="*" element={<AuthScreen />} />
+        </Routes>
         <ToastContainer />
       </>
     );
@@ -53,6 +58,7 @@ export default function App() {
               <Route path="/billing" element={<Billing />} />
               <Route path="/webhooks" element={<Webhooks />} />
               <Route path="/rls-tester" element={<RlsTester />} />
+              <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </ErrorBoundary>

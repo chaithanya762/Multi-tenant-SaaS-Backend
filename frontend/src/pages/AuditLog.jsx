@@ -29,11 +29,34 @@ export function AuditLog() {
     { key: 'occurredAt', label: 'Timestamp', render: (row) => <span className="text-muted font-mono">{row.occurredAt ? new Date(row.occurredAt).toLocaleString() : 'Just now'}</span> }
   ];
 
+  const handleExportCsv = async () => {
+    try {
+      const blob = await apiFetch('/v1/audit-log/export', {
+        headers: { 'Accept': 'text/csv' }
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'audit-logs.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Failed to export CSV', e);
+    }
+  };
+
   return (
     <div className="audit-log-page">
-      <div className="page-header mb-4">
-        <h1>System Audit Logs</h1>
-        <p>Immutable security trail of administrative and data mutations.</p>
+      <div className="page-header mb-4 flex justify-between items-center">
+        <div>
+          <h1>System Audit Logs</h1>
+          <p>Immutable security trail of administrative and data mutations.</p>
+        </div>
+        <button className="btn btn-outline" onClick={handleExportCsv}>
+          Export CSV
+        </button>
       </div>
 
       <div className="card card-p">

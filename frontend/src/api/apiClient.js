@@ -91,6 +91,12 @@ export const createApiClient = (token, refreshToken, tenantId, addToast, handleL
         } catch (_) {}
         throw new Error(errorMsg);
       }
+      
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('text/csv')) {
+        return await response.blob();
+      }
+
       const text = await response.text();
       return text ? JSON.parse(text) : {};
     } catch (error) {

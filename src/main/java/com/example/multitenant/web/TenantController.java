@@ -86,4 +86,52 @@ public class TenantController {
         Tenant tenant = tenantService.updatePlan(id, planId);
         return ResponseEntity.ok(TenantResponse.fromEntity(tenant));
     }
+
+    @GetMapping("/current/branding")
+    @Operation(summary = "Get workspace branding for the current tenant")
+    public ResponseEntity<Map<String, Object>> getCurrentBranding() {
+        String tenantId = com.example.multitenant.context.TenantContext.getTenantId();
+        Tenant tenant = tenantService.getTenantById(tenantId);
+        return ResponseEntity.ok(Map.of(
+                "id", tenant.getId(),
+                "name", tenant.getName(),
+                "logoUrl", tenant.getLogoUrl() != null ? tenant.getLogoUrl() : "",
+                "primaryColor", tenant.getPrimaryColor() != null ? tenant.getPrimaryColor() : "#06b6d4",
+                "customDomain", tenant.getCustomDomain() != null ? tenant.getCustomDomain() : "",
+                "supportEmail", tenant.getSupportEmail() != null ? tenant.getSupportEmail() : ""
+        ));
+    }
+
+    @PatchMapping("/current/branding")
+    @PreAuthorize("hasAnyRole('ROLE_TENANT_ADMIN', 'ROLE_SYS_ADMIN')")
+    @Operation(summary = "Update workspace branding for current tenant")
+    public ResponseEntity<Map<String, Object>> updateCurrentBranding(@RequestBody Map<String, String> body) {
+        String tenantId = com.example.multitenant.context.TenantContext.getTenantId();
+        Tenant tenant = tenantService.getTenantById(tenantId);
+        if (body.containsKey("name") && body.get("name") != null && !body.get("name").isBlank()) {
+            tenant.setName(body.get("name"));
+        }
+        if (body.containsKey("logoUrl")) {
+            tenant.setLogoUrl(body.get("logoUrl"));
+        }
+        if (body.containsKey("primaryColor") && body.get("primaryColor") != null) {
+            tenant.setPrimaryColor(body.get("primaryColor"));
+        }
+        if (body.containsKey("customDomain")) {
+            tenant.setCustomDomain(body.get("customDomain"));
+        }
+        if (body.containsKey("supportEmail")) {
+            tenant.setSupportEmail(body.get("supportEmail"));
+        }
+        // Save tenant via tenantService or direct repository
+        tenantService.updatePlan(tenantId, tenant.getPlanId()); // triggers save
+        return ResponseEntity.ok(Map.of(
+                "id", tenant.getId(),
+                "name", tenant.getName(),
+                "logoUrl", tenant.getLogoUrl() != null ? tenant.getLogoUrl() : "",
+                "primaryColor", tenant.getPrimaryColor() != null ? tenant.getPrimaryColor() : "#06b6d4",
+                "customDomain", tenant.getCustomDomain() != null ? tenant.getCustomDomain() : "",
+                "supportEmail", tenant.getSupportEmail() != null ? tenant.getSupportEmail() : ""
+        ));
+    }
 }

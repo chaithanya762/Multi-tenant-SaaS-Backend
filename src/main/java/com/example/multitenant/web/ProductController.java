@@ -20,9 +20,21 @@ import org.springframework.security.access.prepost.PreAuthorize;
 public class ProductController {
 
     private final ProductService productService;
+    private final com.example.multitenant.service.ExportService exportService;
 
-    public ProductController(ProductService productService) {
+    public ProductController(ProductService productService, com.example.multitenant.service.ExportService exportService) {
         this.productService = productService;
+        this.exportService = exportService;
+    }
+
+    @GetMapping(value = "/export", produces = "text/csv")
+    @PreAuthorize("hasAnyRole('ROLE_TENANT_ADMIN', 'ROLE_TENANT_USER', 'ROLE_SYS_ADMIN')")
+    public ResponseEntity<byte[]> exportProductsCsv() {
+        byte[] csvData = exportService.exportProductsCsv();
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=products.csv")
+                .header("Content-Type", "text/csv")
+                .body(csvData);
     }
 
     @PostMapping

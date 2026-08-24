@@ -51,6 +51,24 @@ export function Products() {
     setProducts([newProduct, ...products]);
   };
 
+  const handleExportCsv = async () => {
+    try {
+      const blob = await apiFetch('/v1/products/export', {
+        headers: { 'Accept': 'text/csv' }
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'products.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Failed to export CSV', e);
+    }
+  };
+
   return (
     <div className="products-page">
       <div className="page-header flex justify-between items-center mb-4 flex-wrap gap-4">
@@ -58,9 +76,14 @@ export function Products() {
           <h1>Product Catalog</h1>
           <p>Manage software packages, pricing models, and tenant product inventory.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setModalOpen(true)}>
-          + Add Product
-        </button>
+        <div className="flex gap-2">
+          <button className="btn btn-outline" onClick={handleExportCsv}>
+            Export CSV
+          </button>
+          <button className="btn btn-primary" onClick={() => setModalOpen(true)}>
+            + Add Product
+          </button>
+        </div>
       </div>
 
       <div className="stats-grid mb-4">

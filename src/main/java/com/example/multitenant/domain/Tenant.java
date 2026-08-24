@@ -28,6 +28,18 @@ public class Tenant {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
+    @Column(name = "logo_url")
+    private String logoUrl;
+
+    @Column(name = "primary_color")
+    private String primaryColor = "#06b6d4";
+
+    @Column(name = "custom_domain")
+    private String customDomain;
+
+    @Column(name = "support_email")
+    private String supportEmail;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
@@ -66,6 +78,14 @@ public class Tenant {
     public void setSuspensionReason(String suspensionReason) { this.suspensionReason = suspensionReason; }
     public Instant getDeletedAt() { return deletedAt; }
     public void setDeletedAt(Instant deletedAt) { this.deletedAt = deletedAt; }
+    public String getLogoUrl() { return logoUrl; }
+    public void setLogoUrl(String logoUrl) { this.logoUrl = logoUrl; }
+    public String getPrimaryColor() { return primaryColor; }
+    public void setPrimaryColor(String primaryColor) { this.primaryColor = primaryColor; }
+    public String getCustomDomain() { return customDomain; }
+    public void setCustomDomain(String customDomain) { this.customDomain = customDomain; }
+    public String getSupportEmail() { return supportEmail; }
+    public void setSupportEmail(String supportEmail) { this.supportEmail = supportEmail; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
 }

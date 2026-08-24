@@ -52,6 +52,24 @@ export function Orders() {
   const completedCount = orders.filter(o => o.status === 'COMPLETED' || o.status === 'Completed' || o.status === 'DELIVERED').length;
   const pendingCount = orders.filter(o => o.status !== 'COMPLETED' && o.status !== 'Completed' && o.status !== 'DELIVERED').length;
 
+  const handleExportCsv = async () => {
+    try {
+      const blob = await apiFetch('/v1/orders/export', {
+        headers: { 'Accept': 'text/csv' }
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'orders.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Failed to export CSV', e);
+    }
+  };
+
   return (
     <div className="orders-page">
       <div className="page-header mb-4 flex justify-between items-center">
@@ -59,9 +77,14 @@ export function Orders() {
           <h1>Order Management</h1>
           <p>Track, filter, and transition tenant order fulfillment states.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
-          + Create Order
-        </button>
+        <div className="flex gap-2">
+          <button className="btn btn-outline" onClick={handleExportCsv}>
+            Export CSV
+          </button>
+          <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
+            + Create Order
+          </button>
+        </div>
       </div>
 
       <div className="stats-grid mb-4">

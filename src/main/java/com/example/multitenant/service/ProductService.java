@@ -26,11 +26,14 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final TenantRepository tenantRepository;
     private final SubscriptionPlanRepository planRepository;
+    private final WebhookDispatcherService webhookDispatcherService;
 
-    public ProductService(ProductRepository productRepository, TenantRepository tenantRepository, SubscriptionPlanRepository planRepository) {
+    public ProductService(ProductRepository productRepository, TenantRepository tenantRepository,
+                          SubscriptionPlanRepository planRepository, WebhookDispatcherService webhookDispatcherService) {
         this.productRepository = productRepository;
         this.tenantRepository = tenantRepository;
         this.planRepository = planRepository;
+        this.webhookDispatcherService = webhookDispatcherService;
     }
 
     @Transactional
@@ -66,7 +69,9 @@ public class ProductService {
                 request.getStockQuantity()
         );
         product.setTenantId(tenantId);
-        return productRepository.save(product);
+        Product saved = productRepository.save(product);
+        webhookDispatcherService.dispatchEvent(tenantId, "product.created", saved);
+        return saved;
     }
 
     @Transactional(readOnly = true)
@@ -102,7 +107,9 @@ public class ProductService {
         if (request.getStockQuantity() != null) {
             product.setStockQuantity(request.getStockQuantity());
         }
-        return productRepository.save(product);
+        Product updated = productRepository.save(product);
+        webhookDispatcherService.dispatchEvent(product.getTenantId(), "product.updated", updated);
+        return updated;
     }
 
     @Transactional
@@ -111,5 +118,6 @@ public class ProductService {
         Product product = getProductById(id);
         product.setDeletedAt(java.time.Instant.now());
         productRepository.save(product);
+        webhookDispatcherService.dispatchEvent(product.getTenantId(), "product.deleted", product);
     }
 }
