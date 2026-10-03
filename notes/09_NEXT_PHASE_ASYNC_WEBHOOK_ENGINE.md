@@ -1,24 +1,9 @@
-# Phase 2: Asynchronous Resilient Webhook Engine (8+ LPA Feature)
-
+# Phase 2: Asynchronous Resilient Webhook Engine
 > **Goal**: Upgrade our webhook system into a production-grade, fault-tolerant, asynchronous event-delivery engine with **Exponential Backoff**, **Dead Letter Queue (DLQ)**, and **Idempotency**.
 
 ---
 
-## 1. Why This Feature is the Secret to Landing 8+ LPA Jobs
-
-In technical interviews for 8–15 LPA roles, interviewers are tired of seeing standard CRUD apps (Create, Read, Update, Delete). Anyone with 2 weeks of tutorials can write an API that saves an entity to a database.
-
-Interviewers want to see **how you solve real-world failures in distributed systems**:
-1. *"What happens when the customer's server is down or slow?"*
-2. *"How do you prevent a failing third-party API from crashing your main web server?"*
-3. *"How do you retry failed network calls without overwhelming the receiver (Thundering Herd problem)?"*
-4. *"How do you guarantee that a retry doesn't cause duplicate charges or duplicate actions (Idempotency)?"*
-
-This phase answers **all four** questions with clean, production-ready code.
-
----
-
-## 2. The Real-Life Analogy (Explain Like I'm 5)
+## 2. The Real-Life Analogy 
 
 Imagine you run an **Amazon Delivery Hub**:
 
