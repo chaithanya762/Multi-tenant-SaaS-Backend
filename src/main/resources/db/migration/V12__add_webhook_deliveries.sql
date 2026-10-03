@@ -1,5 +1,8 @@
 -- Webhook delivery logs with Row-Level Security
-CREATE TABLE IF NOT EXISTS webhook_deliveries (
+-- Drop legacy V5 table if present to avoid schema and column conflicts
+DROP TABLE IF EXISTS webhook_deliveries CASCADE;
+
+CREATE TABLE webhook_deliveries (
     id VARCHAR(64) PRIMARY KEY,
     tenant_id VARCHAR(64) NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     webhook_id VARCHAR(64) NOT NULL REFERENCES webhook_endpoints(id) ON DELETE CASCADE,
