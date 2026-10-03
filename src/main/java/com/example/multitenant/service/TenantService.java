@@ -25,7 +25,7 @@ public class TenantService {
     @Transactional
     public Tenant createTenant(CreateTenantRequest request) {
         if (tenantRepository.existsById(request.getId())) {
-            throw new IllegalArgumentException("Tenant with ID '" + request.getId() + "' already exists");
+            throw new com.example.multitenant.web.exception.TenantAlreadyExistsException(request.getId());
         }
         Tenant tenant = new Tenant(request.getId(), request.getName(), "ACTIVE");
         Tenant saved = tenantRepository.save(tenant);

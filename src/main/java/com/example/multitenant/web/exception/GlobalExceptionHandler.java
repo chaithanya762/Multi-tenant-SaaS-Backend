@@ -25,6 +25,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
     }
 
+    @ExceptionHandler(TenantAlreadyExistsException.class)
+    public ResponseEntity<ApiErrorResponse> handleTenantAlreadyExists(TenantAlreadyExistsException ex, HttpServletRequest request) {
+        log.warn("Tenant already exists: {}", ex.getMessage());
+        ApiErrorResponse body = new ApiErrorResponse(
+                HttpStatus.CONFLICT.value(), "Conflict", ex.getMessage(), request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
     @ExceptionHandler(QuotaExceededException.class)
     public ResponseEntity<ApiErrorResponse> handleQuotaExceeded(QuotaExceededException ex, HttpServletRequest request) {
         log.warn("Quota exceeded for {}: {}", ex.getResource(), ex.getMessage());

@@ -1,6 +1,8 @@
 package com.example.multitenant.domain;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.time.Instant;
 
@@ -21,6 +23,7 @@ public class UsageEvent {
     @Column(nullable = false)
     private BigDecimal quantity = BigDecimal.ONE;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private String metadata;
 
