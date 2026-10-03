@@ -4,11 +4,15 @@ import com.example.multitenant.domain.Tenant;
 import com.example.multitenant.event.TenantOnboardedEvent;
 import com.example.multitenant.repository.TenantRepository;
 import com.example.multitenant.web.dto.CreateTenantRequest;
+import com.example.multitenant.web.exception.TenantAlreadyExistsException;
 import com.example.multitenant.web.exception.TenantNotFoundException;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -25,7 +29,7 @@ public class TenantService {
     @Transactional
     public Tenant createTenant(CreateTenantRequest request) {
         if (tenantRepository.existsById(request.getId())) {
-            throw new com.example.multitenant.web.exception.TenantAlreadyExistsException(request.getId());
+            throw new TenantAlreadyExistsException(request.getId());
         }
         Tenant tenant = new Tenant(request.getId(), request.getName(), "ACTIVE");
         Tenant saved = tenantRepository.save(tenant);
@@ -42,21 +46,24 @@ public class TenantService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "tenantCache", key = "#id")
     public Tenant getTenantById(String id) {
         return tenantRepository.findById(id)
                 .orElseThrow(() -> new TenantNotFoundException(id));
     }
 
     @Transactional
+    @CacheEvict(value = "tenantCache", key = "#id")
     public Tenant suspendTenant(String id, String reason) {
         Tenant tenant = getTenantById(id);
         tenant.setStatus("SUSPENDED");
-        tenant.setSuspendedAt(java.time.Instant.now());
+        tenant.setSuspendedAt(Instant.now());
         tenant.setSuspensionReason(reason);
         return tenantRepository.save(tenant);
     }
 
     @Transactional
+    @CacheEvict(value = "tenantCache", key = "#id")
     public Tenant reactivateTenant(String id) {
         Tenant tenant = getTenantById(id);
         tenant.setStatus("ACTIVE");
@@ -66,14 +73,16 @@ public class TenantService {
     }
 
     @Transactional
+    @CacheEvict(value = "tenantCache", key = "#id")
     public void softDeleteTenant(String id) {
         Tenant tenant = getTenantById(id);
         tenant.setStatus("DELETED");
-        tenant.setDeletedAt(java.time.Instant.now());
+        tenant.setDeletedAt(Instant.now());
         tenantRepository.save(tenant);
     }
 
     @Transactional
+    @CacheEvict(value = "tenantCache", key = "#id")
     public Tenant updatePlan(String id, String planId) {
         Tenant tenant = getTenantById(id);
         tenant.setPlanId(planId);

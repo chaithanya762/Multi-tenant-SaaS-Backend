@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { DataTable } from '../components/ui/DataTable';
 import WebhookDeliveriesModal from '../components/modals/WebhookDeliveriesModal';
@@ -9,20 +9,37 @@ export function Webhooks() {
   const [loading, setLoading] = useState(true);
   const [newHook, setNewHook] = useState({ url: '', events: 'order.created', secret: '' });
 
-  useEffect(() => {
-    const fetchWebhooks = async () => {
-      setLoading(true);
-      try {
-        const res = await apiFetch('/v1/webhooks');
-        setWebhooks(res.content || res || []);
-      } catch (e) {
-        setWebhooks([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchWebhooks();
+  const [deadLetters, setDeadLetters] = useState([]);
+  const [loadingDlq, setLoadingDlq] = useState(false);
+
+  const fetchWebhooks = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await apiFetch('/v1/webhooks');
+      setWebhooks(res.content || res || []);
+    } catch (e) {
+      setWebhooks([]);
+    } finally {
+      setLoading(false);
+    }
   }, [apiFetch]);
+
+  const fetchDeadLetters = useCallback(async () => {
+    setLoadingDlq(true);
+    try {
+      const res = await apiFetch('/v1/webhooks/dead-letter');
+      setDeadLetters(res.content || res || []);
+    } catch (e) {
+      setDeadLetters([]);
+    } finally {
+      setLoadingDlq(false);
+    }
+  }, [apiFetch]);
+
+  useEffect(() => {
+    fetchWebhooks();
+    fetchDeadLetters();
+  }, [fetchWebhooks, fetchDeadLetters]);
 
   const handleRegisterHook = async (e) => {
     e.preventDefault();
@@ -47,9 +64,21 @@ export function Webhooks() {
       const start = Date.now();
       const res = await apiFetch(`/v1/webhooks/${id}/test`, { method: 'POST' });
       const latency = Date.now() - start;
-      addToast(`Webhook test successful. Status: ${res?.status || 200}, Latency: ${latency}ms`, 'success');
+      addToast(`Webhook test initiated. Status: ${res?.status || 'PENDING'}, Latency: ${latency}ms`, 'success');
+      fetchDeadLetters();
     } catch (err) {
       addToast(`Webhook test failed: ${err.message}`, 'error');
+      fetchDeadLetters();
+    }
+  };
+
+  const handleRedeliver = async (deliveryId) => {
+    try {
+      await apiFetch(`/v1/webhooks/deliveries/${deliveryId}/redeliver`, { method: 'POST' });
+      addToast('Webhook re-delivery triggered successfully!', 'success');
+      fetchDeadLetters();
+    } catch (err) {
+      addToast('Failed to redeliver: ' + err.message, 'error');
     }
   };
 
@@ -70,12 +99,42 @@ export function Webhooks() {
     )}
   ];
 
+  const dlqColumns = [
+    { key: 'eventType', label: 'Event', render: (row) => <span className="badge badge-red">{row.eventType}</span> },
+    { key: 'attempts', label: 'Attempts', render: (row) => <span className="badge badge-amber">{row.attemptCount} / 3</span> },
+    { key: 'status', label: 'Status', render: () => <span className="badge badge-red">DEAD_LETTER</span> },
+    { key: 'error', label: 'Last Error Response', render: (row) => (
+      <span className="code-tag" style={{ maxWidth: '280px', display: 'inline-block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.responseBody}>
+        {row.responseBody || 'Network Timeout'}
+      </span>
+    )},
+    { key: 'timestamp', label: 'Failed At', render: (row) => new Date(row.updatedAt || row.createdAt).toLocaleTimeString() },
+    { key: 'actions', label: 'Recovery Action', render: (row) => (
+      <button className="btn btn-primary btn-sm" onClick={() => handleRedeliver(row.id)}>
+        🔁 Retry Now
+      </button>
+    )}
+  ];
+
   return (
     <div className="webhooks-page">
       <div className="page-header mb-4">
-        <h1>Webhook Endpoints</h1>
-        <p>Configure HTTP webhook notifications for real-time tenant system events.</p>
+        <h1>Webhook Endpoints & Resilient Dispatcher</h1>
+        <p>Outbound event streams with asynchronous delivery, exponential backoff retries, and Dead Letter Queue (DLQ) quarantine.</p>
       </div>
+
+      {deadLetters.length > 0 && (
+        <div className="card card-p mb-4" style={{ borderLeft: '4px solid #ef4444' }}>
+          <div className="flex justify-between items-center mb-3">
+            <div>
+              <h3 style={{ color: '#ef4444', margin: 0 }}>⚠️ Quarantined Deliveries (Dead Letter Queue)</h3>
+              <p className="text-muted text-sm mt-1 mb-0">Webhooks that failed 3 consecutive retry attempts. Review error details or click Retry Now.</p>
+            </div>
+            <button className="btn btn-outline btn-sm" onClick={fetchDeadLetters}>Refresh DLQ</button>
+          </div>
+          <DataTable columns={dlqColumns} data={deadLetters} loading={loadingDlq} />
+        </div>
+      )}
 
       <div className="card card-p mb-4">
         <h3 className="mb-2">Register Webhook Endpoint</h3>
@@ -121,7 +180,7 @@ export function Webhooks() {
       </div>
 
       <footer className="app-footer">
-        <div>Multitenant-SaaS Platform v1.0.0</div>
+        <div>Multitenant-SaaS Platform v2.0.0 (Event-Driven Webhook Engine)</div>
         <div className="flex gap-4">
           <a href="#" onClick={e => e.preventDefault()}>Terms of Service</a>
           <a href="#" onClick={e => e.preventDefault()}>Privacy Policy</a>
@@ -131,7 +190,10 @@ export function Webhooks() {
       {showHistoryModal && (
         <WebhookDeliveriesModal 
           webhookId={selectedWebhookId} 
-          onClose={() => setShowHistoryModal(false)} 
+          onClose={() => {
+            setShowHistoryModal(false);
+            fetchDeadLetters();
+          }} 
         />
       )}
     </div>
