@@ -1,5 +1,5 @@
 -- Webhook delivery logs with Row-Level Security
-CREATE TABLE webhook_deliveries (
+CREATE TABLE IF NOT EXISTS webhook_deliveries (
     id VARCHAR(64) PRIMARY KEY,
     tenant_id VARCHAR(64) NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     webhook_id VARCHAR(64) NOT NULL REFERENCES webhook_endpoints(id) ON DELETE CASCADE,
@@ -17,12 +17,13 @@ CREATE TABLE webhook_deliveries (
     updated_by VARCHAR(255)
 );
 
-CREATE INDEX idx_webhook_deliveries_tenant ON webhook_deliveries(tenant_id);
-CREATE INDEX idx_webhook_deliveries_webhook ON webhook_deliveries(webhook_id);
+CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_tenant ON webhook_deliveries(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_webhook ON webhook_deliveries(webhook_id);
 
 ALTER TABLE webhook_deliveries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE webhook_deliveries FORCE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS webhook_deliveries_tenant_isolation_policy ON webhook_deliveries;
 CREATE POLICY webhook_deliveries_tenant_isolation_policy ON webhook_deliveries
     FOR ALL
     USING (

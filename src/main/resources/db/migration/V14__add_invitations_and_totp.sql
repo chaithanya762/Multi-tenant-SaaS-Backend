@@ -1,5 +1,5 @@
 -- Add user invitations table
-CREATE TABLE user_invitations (
+CREATE TABLE IF NOT EXISTS user_invitations (
     id VARCHAR(64) PRIMARY KEY,
     tenant_id VARCHAR(64) NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     email VARCHAR(255) NOT NULL,
@@ -14,12 +14,13 @@ CREATE TABLE user_invitations (
     updated_by VARCHAR(255)
 );
 
-CREATE INDEX idx_user_invitations_tenant ON user_invitations(tenant_id);
-CREATE INDEX idx_user_invitations_token ON user_invitations(token);
+CREATE INDEX IF NOT EXISTS idx_user_invitations_tenant ON user_invitations(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_user_invitations_token ON user_invitations(token);
 
 ALTER TABLE user_invitations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_invitations FORCE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS user_invitations_tenant_isolation_policy ON user_invitations;
 CREATE POLICY user_invitations_tenant_isolation_policy ON user_invitations
     FOR ALL
     USING (
