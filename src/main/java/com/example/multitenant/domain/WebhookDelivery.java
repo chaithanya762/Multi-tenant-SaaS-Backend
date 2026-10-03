@@ -3,12 +3,18 @@ package com.example.multitenant.domain;
 import jakarta.persistence.*;
 import org.hibernate.annotations.SQLRestriction;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
 @Table(name = "webhook_deliveries")
 @SQLRestriction("deleted_at IS NULL")
 public class WebhookDelivery extends AbstractTenantEntity {
+
+    public static final String STATUS_SUCCESS = "SUCCESS";
+    public static final String STATUS_PENDING_RETRY = "PENDING_RETRY";
+    public static final String STATUS_DEAD_LETTER = "DEAD_LETTER";
+    public static final String STATUS_FAILED = "FAILED";
 
     @Id
     private String id;
@@ -35,7 +41,13 @@ public class WebhookDelivery extends AbstractTenantEntity {
     private long durationMs;
 
     @Column(nullable = false)
-    private String status; // SUCCESS, FAILED
+    private String status; // SUCCESS, PENDING_RETRY, DEAD_LETTER, FAILED
+
+    @Column(name = "next_retry_at")
+    private Instant nextRetryAt;
+
+    @Column(name = "idempotency_key")
+    private String idempotencyKey;
 
     public WebhookDelivery() {}
 
@@ -49,6 +61,13 @@ public class WebhookDelivery extends AbstractTenantEntity {
         this.attemptCount = attemptCount;
         this.durationMs = durationMs;
         this.status = status;
+        this.idempotencyKey = this.id;
+    }
+
+    public WebhookDelivery(String id, String webhookId, String eventType, String payload, Integer responseStatus, String responseBody, int attemptCount, long durationMs, String status, Instant nextRetryAt, String idempotencyKey) {
+        this(id, webhookId, eventType, payload, responseStatus, responseBody, attemptCount, durationMs, status);
+        this.nextRetryAt = nextRetryAt;
+        this.idempotencyKey = idempotencyKey != null ? idempotencyKey : this.id;
     }
 
     public String getId() { return id; }
@@ -69,4 +88,8 @@ public class WebhookDelivery extends AbstractTenantEntity {
     public void setDurationMs(long durationMs) { this.durationMs = durationMs; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public Instant getNextRetryAt() { return nextRetryAt; }
+    public void setNextRetryAt(Instant nextRetryAt) { this.nextRetryAt = nextRetryAt; }
+    public String getIdempotencyKey() { return idempotencyKey; }
+    public void setIdempotencyKey(String idempotencyKey) { this.idempotencyKey = idempotencyKey; }
 }

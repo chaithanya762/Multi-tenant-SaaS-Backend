@@ -72,6 +72,22 @@ public class WebhookController {
         return ResponseEntity.ok(webhookDeliveryRepository.findByTenantIdAndWebhookIdOrderByCreatedAtDesc(tenantId, id));
     }
 
+    @GetMapping("/dead-letter")
+    @Operation(summary = "List all dead-lettered (DLQ) webhooks for inspection")
+    @PreAuthorize("hasAnyRole('ROLE_TENANT_ADMIN', 'ROLE_SYS_ADMIN')")
+    public ResponseEntity<List<com.example.multitenant.domain.WebhookDelivery>> getDeadLetterDeliveries() {
+        String tenantId = TenantContext.getTenantId();
+        return ResponseEntity.ok(webhookDeliveryRepository.findByTenantIdAndStatusOrderByCreatedAtDesc(
+                tenantId, com.example.multitenant.domain.WebhookDelivery.STATUS_DEAD_LETTER));
+    }
+
+    @PostMapping("/deliveries/{deliveryId}/redeliver")
+    @Operation(summary = "Manually redeliver a failed or dead-lettered webhook")
+    @PreAuthorize("hasAnyRole('ROLE_TENANT_ADMIN', 'ROLE_SYS_ADMIN')")
+    public ResponseEntity<com.example.multitenant.domain.WebhookDelivery> redeliverWebhook(@PathVariable String deliveryId) {
+        return ResponseEntity.ok(webhookDispatcherService.redeliver(deliveryId));
+    }
+
     @DeleteMapping("/{id}")
     @Operation(summary = "Deactivate a webhook endpoint")
     @PreAuthorize("hasAnyRole('ROLE_TENANT_ADMIN', 'ROLE_SYS_ADMIN')")

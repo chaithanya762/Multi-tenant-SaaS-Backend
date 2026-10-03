@@ -19,6 +19,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +29,9 @@ import java.util.UUID;
 public class WebhookDispatcherService {
 
     private static final Logger log = LoggerFactory.getLogger(WebhookDispatcherService.class);
+    public static final int MAX_ATTEMPTS = 3;
+    public static final long BASE_BACKOFF_SECONDS = 30; // Attempt 1: immediate, Attempt 2: 30s, Attempt 3: 120s
+
     private final WebhookEndpointRepository endpointRepository;
     private final WebhookDeliveryRepository deliveryRepository;
     private final ObjectMapper objectMapper;
@@ -81,11 +85,73 @@ public class WebhookDispatcherService {
         return deliverWebhook(endpoint, "test.ping", testPayload);
     }
 
-    private WebhookDelivery deliverWebhook(WebhookEndpoint endpoint, String eventType, String jsonPayload) {
+    public WebhookDelivery deliverWebhook(WebhookEndpoint endpoint, String eventType, String jsonPayload) {
+        String deliveryId = UUID.randomUUID().toString();
+        int attempt = 1;
+        DeliveryAttemptResult result = executeHttpAttempt(endpoint, deliveryId, attempt, jsonPayload);
+
+        WebhookDelivery delivery = new WebhookDelivery(
+                deliveryId,
+                endpoint.getId(),
+                eventType,
+                jsonPayload,
+                result.statusCode,
+                result.responseBody,
+                attempt,
+                result.durationMs,
+                result.status,
+                result.nextRetryAt,
+                deliveryId
+        );
+        delivery.setTenantId(endpoint.getTenantId());
+        return deliveryRepository.save(delivery);
+    }
+
+    public WebhookDelivery retryDelivery(WebhookDelivery delivery) {
+        WebhookEndpoint endpoint = endpointRepository.findById(delivery.getWebhookId()).orElse(null);
+        if (endpoint == null || !endpoint.isActive()) {
+            delivery.setStatus(WebhookDelivery.STATUS_DEAD_LETTER);
+            delivery.setResponseBody("Endpoint not found or deactivated");
+            delivery.setNextRetryAt(null);
+            return deliveryRepository.save(delivery);
+        }
+
+        int newAttempt = delivery.getAttemptCount() + 1;
+        DeliveryAttemptResult result = executeHttpAttempt(endpoint, delivery.getIdempotencyKey(), newAttempt, delivery.getPayload());
+
+        delivery.setAttemptCount(newAttempt);
+        delivery.setResponseStatus(result.statusCode);
+        delivery.setResponseBody(result.responseBody);
+        delivery.setDurationMs(result.durationMs);
+        delivery.setStatus(result.status);
+        delivery.setNextRetryAt(result.nextRetryAt);
+
+        log.info("Webhook retry attempt {} for delivery {} resulted in status: {}", newAttempt, delivery.getId(), result.status);
+        return deliveryRepository.save(delivery);
+    }
+
+    public WebhookDelivery redeliver(String deliveryId) {
+        String tenantId = TenantContext.getTenantId();
+        WebhookDelivery delivery = deliveryRepository.findById(deliveryId)
+                .orElseThrow(() -> new IllegalArgumentException("Webhook delivery not found: " + deliveryId));
+
+        // If not sys_admin, verify tenant owns this delivery
+        if (tenantId != null && !tenantId.isBlank() && !"sys_admin".equalsIgnoreCase(tenantId)) {
+            if (!tenantId.equals(delivery.getTenantId())) {
+                throw new IllegalArgumentException("Access denied to webhook delivery: " + deliveryId);
+            }
+        }
+
+        log.info("Manual redelivery triggered for delivery {}", deliveryId);
+        return retryDelivery(delivery);
+    }
+
+    private DeliveryAttemptResult executeHttpAttempt(WebhookEndpoint endpoint, String deliveryId, int attempt, String jsonPayload) {
         long startTime = System.currentTimeMillis();
         Integer statusCode = null;
         String responseBody = null;
-        String status = "FAILED";
+        String status = WebhookDelivery.STATUS_PENDING_RETRY;
+        Instant nextRetryAt = null;
 
         try {
             String signature = computeHmacSha256(endpoint.getSecret(), jsonPayload);
@@ -93,8 +159,11 @@ public class WebhookDispatcherService {
                     .uri(URI.create(endpoint.getUrl()))
                     .header("Content-Type", "application/json")
                     .header("X-Tenant-ID", endpoint.getTenantId())
+                    .header("X-Webhook-ID", deliveryId)
+                    .header("X-Webhook-Attempt", String.valueOf(attempt))
+                    .header("X-Webhook-Timestamp", String.valueOf(System.currentTimeMillis()))
                     .header("X-Hub-Signature-256", signature)
-                    .header("User-Agent", "Multitenant-SaaS-Webhook-Dispatcher/1.0")
+                    .header("User-Agent", "Multitenant-SaaS-Webhook-Dispatcher/2.0")
                     .timeout(Duration.ofSeconds(10))
                     .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
                     .build();
@@ -105,29 +174,40 @@ public class WebhookDispatcherService {
             if (responseBody != null && responseBody.length() > 2000) {
                 responseBody = responseBody.substring(0, 2000) + "...[truncated]";
             }
+
             if (statusCode >= 200 && statusCode < 300) {
-                status = "SUCCESS";
+                status = WebhookDelivery.STATUS_SUCCESS;
+                nextRetryAt = null;
+            } else {
+                status = determineFailureStatus(attempt);
+                nextRetryAt = calculateNextRetryAt(attempt);
             }
         } catch (Exception e) {
             responseBody = "Delivery error: " + e.getMessage();
-            log.warn("Webhook delivery error to URL '{}': {}", endpoint.getUrl(), e.getMessage());
+            log.warn("Webhook delivery error to URL '{}' (attempt {}): {}", endpoint.getUrl(), attempt, e.getMessage());
+            status = determineFailureStatus(attempt);
+            nextRetryAt = calculateNextRetryAt(attempt);
         }
 
         long durationMs = System.currentTimeMillis() - startTime;
+        return new DeliveryAttemptResult(statusCode, responseBody, status, nextRetryAt, durationMs);
+    }
 
-        WebhookDelivery delivery = new WebhookDelivery(
-                UUID.randomUUID().toString(),
-                endpoint.getId(),
-                eventType,
-                jsonPayload,
-                statusCode,
-                responseBody,
-                1,
-                durationMs,
-                status
-        );
-        delivery.setTenantId(endpoint.getTenantId());
-        return deliveryRepository.save(delivery);
+    private String determineFailureStatus(int attempt) {
+        if (attempt >= MAX_ATTEMPTS) {
+            log.warn("Webhook delivery exceeded max attempts ({}). Moving to DEAD_LETTER queue (DLQ).", MAX_ATTEMPTS);
+            return WebhookDelivery.STATUS_DEAD_LETTER;
+        }
+        return WebhookDelivery.STATUS_PENDING_RETRY;
+    }
+
+    private Instant calculateNextRetryAt(int attempt) {
+        if (attempt >= MAX_ATTEMPTS) {
+            return null;
+        }
+        // Exponential backoff: 30s * 2^(attempt - 1)
+        long delaySeconds = BASE_BACKOFF_SECONDS * (long) Math.pow(2, attempt - 1);
+        return Instant.now().plusSeconds(delaySeconds);
     }
 
     private String computeHmacSha256(String secret, String data) {
@@ -139,6 +219,22 @@ public class WebhookDispatcherService {
             return "sha256=" + HexFormat.of().formatHex(hmacBytes);
         } catch (Exception e) {
             return "sha256=none";
+        }
+    }
+
+    private static class DeliveryAttemptResult {
+        final Integer statusCode;
+        final String responseBody;
+        final String status;
+        final Instant nextRetryAt;
+        final long durationMs;
+
+        DeliveryAttemptResult(Integer statusCode, String responseBody, String status, Instant nextRetryAt, long durationMs) {
+            this.statusCode = statusCode;
+            this.responseBody = responseBody;
+            this.status = status;
+            this.nextRetryAt = nextRetryAt;
+            this.durationMs = durationMs;
         }
     }
 }
