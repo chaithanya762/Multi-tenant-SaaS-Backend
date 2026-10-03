@@ -1,8 +1,3 @@
-# Comprehensive Beginner‑Friendly Tutorial for the Multi‑tenant SaaS Backend
-
-> **Audience**: This guide assumes you are completely new to the project, to SaaS concepts, and to the technologies used (Java, Spring Boot, PostgreSQL, Docker, etc.). We will start from the very basics and gradually dive deeper, referencing actual source files in the repository so you can see *exactly* where things live.
-
----
 
 ## 1. What is a SaaS‑Multi‑tenant Application?
 
@@ -295,7 +290,7 @@ WITH CHECK (created_by = current_setting('app.current_user_email'));
 
 ---
 
-## 12. Frequently Asked “Dumb‑Head” Questions
+## 12. Frequently Asked  Questions
 | Question | Simple Answer |
 |----------|---------------|
 | *What is a `ThreadLocal`?* | It is a variable that each thread gets its own copy of. Here it holds the current tenant ID so every request’s DB calls see the right tenant. |
@@ -313,6 +308,4 @@ WITH CHECK (created_by = current_setting('app.current_user_email'));
 - For deeper dives, read the source files linked throughout this guide.
 - Pick one of the **future implementation ideas** above and start a feature branch – it’s a great way to solidify your knowledge!
 
----
 
-If anything is unclear, feel free to ask follow‑up questions. Happy coding! 🚀
