@@ -4,6 +4,7 @@ services:
     env: docker
     dockerfilePath: ./Dockerfile
     plan: free
+    healthCheckPath: /actuator/health
     envVars:
       - key: SPRING_DATASOURCE_URL
         fromDatabase:
@@ -29,6 +30,13 @@ services:
     env: static
     buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: ./frontend/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://multitenant-backend-4lh0.onrender.com
 
 databases:
   - name: multitenant-db

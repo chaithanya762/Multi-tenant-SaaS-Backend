@@ -28,37 +28,41 @@ public class DatabaseUrlEnvironmentPostProcessor implements EnvironmentPostProce
 
         if (rawUrl.startsWith("postgres://") || rawUrl.startsWith("postgresql://")) {
             try {
-                String cleanUriStr = rawUrl.startsWith("postgres://")
-                        ? "http" + rawUrl.substring(8)
-                        : "http" + rawUrl.substring(10);
+                int schemeEnd = rawUrl.indexOf("://") + 3;
+                int slashIndex = rawUrl.indexOf("/", schemeEnd);
+                int atIndex = rawUrl.indexOf("@", schemeEnd);
 
-                URI uri = new URI(cleanUriStr);
-
-                String host = uri.getHost();
-                int port = uri.getPort() > 0 ? uri.getPort() : 5432;
-                String path = uri.getPath();
-
-                String jdbcUrl = "jdbc:postgresql://" + host + ":" + port + path;
-
+                String jdbcUrl;
                 Map<String, Object> targetProps = new HashMap<>();
-                targetProps.put("spring.datasource.url", jdbcUrl);
 
-                if (uri.getUserInfo() != null && uri.getUserInfo().contains(":")) {
-                    String[] userInfo = uri.getUserInfo().split(":", 2);
-                    if (!environment.containsProperty("SPRING_DATASOURCE_USERNAME")
-                            && !environment.containsProperty("spring.datasource.username")) {
-                        targetProps.put("spring.datasource.username", userInfo[0]);
+                if (atIndex != -1 && (slashIndex == -1 || atIndex < slashIndex)) {
+                    String userInfo = rawUrl.substring(schemeEnd, atIndex);
+                    String hostAndDb = rawUrl.substring(atIndex + 1);
+                    jdbcUrl = "jdbc:postgresql://" + hostAndDb;
+
+                    if (userInfo.contains(":")) {
+                        int colonIndex = userInfo.indexOf(":");
+                        String user = userInfo.substring(0, colonIndex);
+                        String pass = userInfo.substring(colonIndex + 1);
+
+                        if (!environment.containsProperty("SPRING_DATASOURCE_USERNAME")
+                                && !environment.containsProperty("spring.datasource.username")) {
+                            targetProps.put("spring.datasource.username", user);
+                        }
+                        if (!environment.containsProperty("SPRING_DATASOURCE_PASSWORD")
+                                && !environment.containsProperty("spring.datasource.password")) {
+                            targetProps.put("spring.datasource.password", pass);
+                        }
                     }
-                    if (!environment.containsProperty("SPRING_DATASOURCE_PASSWORD")
-                            && !environment.containsProperty("spring.datasource.password")) {
-                        targetProps.put("spring.datasource.password", userInfo[1]);
-                    }
+                } else {
+                    jdbcUrl = "jdbc:postgresql://" + rawUrl.substring(schemeEnd);
                 }
 
-                log.info("Sanitized database connection URL from postgres:// scheme to {}", jdbcUrl);
+                targetProps.put("spring.datasource.url", jdbcUrl);
+                log.info("Sanitized database connection URL to {}", jdbcUrl.replaceAll(":[^/@]+@", ":****@"));
                 environment.getPropertySources().addFirst(new MapPropertySource("customDatabaseUrlPostProcessor", targetProps));
             } catch (Exception e) {
-                log.warn("Failed to parse database connection URL '{}': {}", rawUrl, e.getMessage());
+                log.warn("Failed to sanitize database connection URL '{}': {}", rawUrl, e.getMessage());
             }
         }
     }

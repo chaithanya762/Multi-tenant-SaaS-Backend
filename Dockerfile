@@ -14,12 +14,14 @@ WORKDIR /app
 COPY --from=builder /app/target/*.jar app.jar
 USER appuser
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
     CMD wget -qO- http://localhost:${PORT:-8080}/actuator/health || exit 1
 
 EXPOSE 8080
 ENTRYPOINT ["java", \
-    "-XX:+UseG1GC", \
-    "-XX:MaxRAMPercentage=75.0", \
+    "-XX:+UseSerialGC", \
+    "-Xms256m", \
+    "-Xmx320m", \
+    "-XX:MaxMetaspaceSize=128m", \
     "-Djava.security.egd=file:/dev/./urandom", \
     "-jar", "app.jar"]
