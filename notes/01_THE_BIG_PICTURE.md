@@ -1,10 +1,3 @@
-# 🏢 01 - The Big Picture: What Did You Actually Build?
-
-> **"Explain like I'm 5 (or like I vibe coded this without looking at the code)!"**
-
-Welcome! If you feel like you just copy-pasted or vibe-coded your way into a complex enterprise codebase and now have no idea how it works, **don't panic**. You actually built something very impressive and commercially valuable.
-
-Let's break it down from absolute ground zero.
 
 ---
 
