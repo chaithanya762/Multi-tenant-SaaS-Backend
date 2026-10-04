@@ -272,10 +272,6 @@ We transformed [`frontend/src/pages/RlsTester.jsx`](file:///C:/Users/admin/Downl
 
 ---
 
-## 5. How to Ace 8–15 LPA Interview Questions with Phase 3
-
-When an interviewer asks you about database architecture or security, use these exact talking points:
-
 ### Q1: "Why did you use PostgreSQL Row-Level Security instead of just writing `WHERE tenant_id = ?` in Java?"
 > **Your Answer**:
 > *"Writing `WHERE tenant_id = ?` in the application layer creates a severe vulnerability known as human error. If any developer on the team writes a custom repository method and forgets the tenant filter, customer data is leaked (OWASP A01: IDOR).
