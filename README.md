@@ -23,7 +23,7 @@
 
 ---
 
-## 📖 Executive Summary
+## 📖 Summary
 
 This platform implements a **shared-schema, multi-tenant architecture** where all enterprise tenants coexist in a single PostgreSQL database, isolated at the operating system/database kernel level via **PostgreSQL Row-Level Security (RLS)**. Every query is automatically scoped to the authenticated tenant at the database connection level — eliminating application-level leakage risks and vulnerability to forgotten `WHERE tenant_id = ?` clauses.
 
