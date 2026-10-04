@@ -204,6 +204,36 @@ The project includes an end-to-end integration test suite using **Testcontainers
 
 # Run Redis cache & eviction test
 ./mvnw test -Dtest=TenantCacheIntegrationTest
+
+# Run Cyber Security & Penetration Attack Simulation tests
+./mvnw test -Dtest=AttackSimulationIntegrationTest
+```
+
+---
+
+## 🛡️ Cyber Security & RLS Penetration Testing Console
+
+To make multi-tenant defense verifiable and demonstrable during security audits and technical interviews, the platform includes a built-in **Cyber Security & Penetration Testing Console** that executes live attacks against the database kernel:
+
+| Attack Vector | OWASP Classification | Simulated Threat | Active Defense Layer | Verified Outcome |
+|---|---|---|---|---|
+| **IDOR Cross-Tenant Read** | A01:2021 Broken Access Control | Attacker discovers victim tenant's confidential ledger UUID and queries it directly | PostgreSQL RLS Kernel (`USING (tenant_id = current_setting('app.current_tenant_id'))`) | **0 Records Leaked** (Database returns 0 rows) |
+| **Tenant Header Spoofing** | A07:2021 Identification & Auth Failures | Attacker submits a valid JWT for Tenant A with forged `X-Tenant-ID: tenant-beta` | Spring Security Filter & Cryptographic Token Claim Verifier | **Rejected with HTTP 403** (Claim mismatch) |
+| **Cross-Tenant Write Poisoning** | A03:2021 Injection & Integrity Failure | Attacker attempts to overwrite inventory pricing to \$0.01 on a foreign tenant row | PostgreSQL RLS `WITH CHECK` Constraint & Session Aspect | **Write Blocked** (0 rows modified) |
+
+### Penetration Testing Endpoints:
+```bash
+# 1. Simulate IDOR Attack (Cross-Tenant Data Leak)
+curl -X POST "http://localhost:8080/api/v1/security/simulate/idor" \
+  -H "Authorization: Bearer <JWT_TOKEN>"
+
+# 2. Simulate Tenant Header Spoofing (Privilege Escalation)
+curl -X POST "http://localhost:8080/api/v1/security/simulate/header-spoof" \
+  -H "Authorization: Bearer <JWT_TOKEN>"
+
+# 3. Simulate Cross-Tenant Data Poisoning (Write Injection)
+curl -X POST "http://localhost:8080/api/v1/security/simulate/cross-tenant-write" \
+  -H "Authorization: Bearer <JWT_TOKEN>"
 ```
 
 ---

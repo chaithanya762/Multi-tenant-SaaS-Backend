@@ -13,7 +13,7 @@ const tabs = [
   { name: 'Billing', path: '/billing' },
   { name: 'Webhooks', path: '/webhooks' },
   { name: 'Settings', path: '/settings' },
-  { name: 'RLS Inspector', path: '/rls-tester' },
+  { name: 'RLS Attack Tester', path: '/rls-tester' },
 ];
 
 export function Sidebar({ open, setOpen }) {
