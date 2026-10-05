@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 public class TenantContext {
 
     private static final Logger log = LoggerFactory.getLogger(TenantContext.class);
-    private static final ThreadLocal<String> CURRENT_TENANT = new ThreadLocal<>();
+    private static final ThreadLocal<String> CURRENT_TENANT = new ThreadLocal<>(); //current_tenant is a static threadlocal string acting as an actual storage container 
 
     private TenantContext() {
         // Utility class
@@ -18,6 +18,7 @@ public class TenantContext {
     public static void setTenantId(String tenantId) {
         log.debug("Setting current tenant to: {}", tenantId);
         CURRENT_TENANT.set(tenantId);
+        //current tenant - static thread local actual storage container
     }
 
     public static String getTenantId() {
