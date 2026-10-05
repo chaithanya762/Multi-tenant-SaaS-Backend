@@ -44,21 +44,21 @@ public class CacheConfig {
                 log.info("Redis connection verified. Initializing distributed RedisCacheManager with 10m TTL.");
 
                 RedisCacheConfiguration cacheConfig = RedisCacheConfiguration.defaultCacheConfig()
-                        .entryTtl(Duration.ofMinutes(10))
+                        .entryTtl(Duration.ofMinutes(10)) //cache entries expire after 10 minutes old data is cleared
                         .disableCachingNullValues()
-                        .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
-                        .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer()));
+                        .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer())) //keys are strings
+                        .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer())); //values are json
 
                 return RedisCacheManager.builder(connectionFactory)
                         .cacheDefaults(cacheConfig)
                         .build();
             } catch (Exception e) {
                 log.warn("Redis unavailable ({}). Falling back to in-memory ConcurrentMapCacheManager.", e.getMessage());
-            }
+            } //if redis cache unavailable use javas in memory cache instead
         } else {
             log.info("No RedisConnectionFactory configured. Initializing in-memory ConcurrentMapCacheManager.");
         }
 
-        return new ConcurrentMapCacheManager(TENANT_CACHE, PRODUCTS_CACHE, PLAN_CACHE);
+        return new ConcurrentMapCacheManager(TENANT_CACHE, PRODUCTS_CACHE, PLAN_CACHE); // a small desk drawer in memeory for local use.
     }
 }
