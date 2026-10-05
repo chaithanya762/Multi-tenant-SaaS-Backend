@@ -8,6 +8,7 @@ import jakarta.persistence.PreUpdate;
 import org.hibernate.annotations.TenantId;
 
 import java.time.Instant;
+//stores tenanat meta data & audit scoping
 
 @MappedSuperclass
 public abstract class AbstractTenantEntity {
