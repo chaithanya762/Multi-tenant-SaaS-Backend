@@ -20,9 +20,9 @@ public class SecurityHeadersFilter implements Filter {
     public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
             throws IOException, ServletException {
         HttpServletResponse response = (HttpServletResponse) res;
-        response.setHeader("X-Content-Type-Options", "nosniff");
-        response.setHeader("X-Frame-Options", "DENY");
-        response.setHeader("X-XSS-Protection", "1; mode=block");
+        response.setHeader("X-Content-Type-Options", "nosniff");//Prevents browsers from guessing a file’s MIME type
+        response.setHeader("X-Frame-Options", "DENY");//Stops the app from being embedded in a frame, helping prevent clickjacking
+        response.setHeader("X-XSS-Protection", "1; mode=block");//Enables older browser XSS filtering behavior
         response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
         response.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
         response.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
