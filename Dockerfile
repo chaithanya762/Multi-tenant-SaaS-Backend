@@ -7,7 +7,7 @@ RUN chmod +x mvnw && ./mvnw dependency:resolve -B
 COPY src/ src/
 RUN ./mvnw package -DskipTests -B
 
-# Stage 2: Run
+# Stage 2: Run - create a small runtime image , start the jar with java & expose port 8080 & health check runs every 30s to confirm the app is alive.
 FROM eclipse-temurin:17-jre-alpine
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
