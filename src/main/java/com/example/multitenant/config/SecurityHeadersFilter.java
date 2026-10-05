@@ -23,9 +23,9 @@ public class SecurityHeadersFilter implements Filter {
         response.setHeader("X-Content-Type-Options", "nosniff");//Prevents browsers from guessing a file’s MIME type
         response.setHeader("X-Frame-Options", "DENY");//Stops the app from being embedded in a frame, helping prevent clickjacking
         response.setHeader("X-XSS-Protection", "1; mode=block");//Enables older browser XSS filtering behavior
-        response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-        response.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
-        response.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+        response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");//Reduces leakage of sensitive URL information in referrers
+        response.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");//Reduces leakage of sensitive URL information in referrers
+        response.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");//Tells browsers to enforce HTTPS for one year and all subdomains
         chain.doFilter(req, res);
     }
 
