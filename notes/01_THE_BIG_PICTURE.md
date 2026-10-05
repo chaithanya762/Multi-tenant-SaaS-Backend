@@ -27,9 +27,9 @@ Imagine you want to build a software product and sell it to 1,000 different comp
 
 ---
 
-## 3. What Does YOUR Project Actually Do?
+## 3. What Does this Project Actually Do?
 
-Your project is an **Enterprise Multi-Tenant SaaS Platform**. It is a full-stack platform providing:
+This project is an **Enterprise Multi-Tenant SaaS Platform**. It is a full-stack platform providing:
 
 1. **Tenant Onboarding & Isolation**:
    - Multiple businesses (tenants) can sign up (e.g. `tenant-alpha`, `tenant-beta`).
