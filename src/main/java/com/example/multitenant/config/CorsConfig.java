@@ -11,8 +11,9 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
-    @Bean
-    public CorsFilter corsFilter() {
+    @Bean //create & register this object in the app automatically
+    public CorsFilter corsFilter() { //cors filter decides who can access the backend
+        //CorsFilter is a special Spring filter that checks every incoming HTTP request.So the app will use this filter to enforce CORS rules.
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of(
             "http://localhost:3000",
@@ -27,6 +28,6 @@ public class CorsConfig {
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", config);
-        return new CorsFilter(source);
+        return new CorsFilter(source); //spring fileter that uses URL to rules mapping.
     }
 }
