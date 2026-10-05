@@ -62,10 +62,6 @@ git push origin main
 
 ---
 
-## 💼 3. How to Explain This Project in an Interview
-
-If an interviewer asks you: *"Tell me about the most complex backend project you've built,"* here is your script:
-
 ### The 30-Second Elevator Pitch
 > *"I built an enterprise multi-tenant SaaS backend and management console designed for shared-schema multi-tenancy. Rather than relying on simple SQL WHERE clauses in application code—which is error-prone and vulnerable to developer oversight—I leveraged PostgreSQL's native Row-Level Security (RLS) policies. I integrated this with Spring Boot 3 using an AOP session aspect that intercepts repository queries and sets the transaction-scoped tenant context in PostgreSQL dynamically. The system includes JWT authentication with refresh token rotation, RBAC role separation, Flyway versioned migrations, distributed caching with Redis, audit logging, and usage metering."*
 
